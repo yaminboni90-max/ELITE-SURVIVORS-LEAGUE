@@ -464,27 +464,28 @@
         
         .notice-item {
             background: #f8f9fa;
-            padding: 15px;
+            padding: 10px 12px;
             border-radius: 10px;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             border-left: 4px solid var(--primary);
             position: relative;
         }
         
         .notice-item-title {
-            font-size: 16px;
+            font-size: 13px;
             font-weight: 700;
             color: #222;
-            margin-bottom: 8px;
+            margin-bottom: 5px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         
         .notice-item-text {
-            font-size: 14px;
+            font-size: 12px;
             color: #555;
-            line-height: 1.6;
+            line-height: 1.7;
+            white-space: pre-line;
         }
         
         .notice-highlight {
@@ -1171,12 +1172,27 @@
                 <button onclick="navigate('home')" class="back-button">
                     <i class="fas fa-arrow-left"></i> Back to Home
                 </button>
-                <h3>Withdraw Winning Funds</h3>
-                <p style="font-size:12px; color:#666; margin-bottom:20px;">Note: You can only withdraw your winning balance. Deposit balance cannot be withdrawn.</p>
-                <div style="background:#f0fff4; padding:10px; border:1px solid #c6f6d5; border-radius:8px; margin-bottom:20px; text-align:center;">
-                    <span style="font-size:12px; color:#2f855a;">Available for Withdraw</span>
-                    <h2 style="color:#2f855a;" id="withdraw-available-display">0 ৳</h2>
+                <h3>Withdraw Funds</h3>
+                <p style="font-size:12px; color:#666; margin-bottom:15px;">Deposit এবং Winning Balance উভয় থেকেই withdraw করতে পারবেন।</p>
+                
+                <!-- Balance Display -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+                    <div style="background:#f0fff4; padding:10px; border:1px solid #c6f6d5; border-radius:8px; text-align:center;">
+                        <span style="font-size:11px; color:#2f855a;">💰 Deposit Balance</span>
+                        <h3 style="color:#2f855a; margin-top:4px;" id="withdraw-deposit-display">0 ৳</h3>
+                    </div>
+                    <div style="background:#fff8f0; padding:10px; border:1px solid #fbd38d; border-radius:8px; text-align:center;">
+                        <span style="font-size:11px; color:#c05621;">🏆 Winning Balance</span>
+                        <h3 style="color:#c05621; margin-top:4px;" id="withdraw-available-display">0 ৳</h3>
+                    </div>
                 </div>
+                
+                <!-- Total Available -->
+                <div style="background:#ebf8ff; padding:10px; border:1px solid #bee3f8; border-radius:8px; margin-bottom:20px; text-align:center;">
+                    <span style="font-size:12px; color:#2b6cb0;">মোট Withdraw করা যাবে</span>
+                    <h2 style="color:#2b6cb0;" id="withdraw-total-display">0 ৳</h2>
+                </div>
+                
                 <div class="form-group">
                     <label>Amount</label>
                     <input type="number" id="withdraw-amount" class="input-field" placeholder="Minimum 100">
@@ -1201,7 +1217,22 @@
                 <button onclick="navigate('home')" class="back-button">
                     <i class="fas fa-arrow-left"></i> Back to Home
                 </button>
-                <h3>Transaction History</h3>
+                
+                <h3>📊 History</h3>
+                <p style="font-size:13px; color:#666; margin-bottom:20px;">Withdraw, Deposit এবং Winner এর সম্পূর্ণ রেকর্ড</p>
+                
+                <!-- Winner History Collapsible -->
+                <details style="margin-bottom:15px; background:#f9f9f9; border:2px solid #ff9800; border-radius:12px; padding:0; overflow:hidden;">
+                    <summary style="font-weight:700; cursor:pointer; font-size:15px; padding:15px; background:linear-gradient(135deg, rgba(255,152,0,0.1), rgba(255,152,0,0.05)); display:flex; align-items:center; gap:10px;">
+                        🏆 Winner History
+                    </summary>
+                    <div id="winner-history-list" style="padding:15px;">
+                        <div style="text-align:center; padding:20px; color:#999;">Loading...</div>
+                    </div>
+                </details>
+                
+                <!-- Transaction History -->
+                <h4 style="font-size:15px; font-weight:700; margin-bottom:10px; color:#333;">💰 Transaction History</h4>
                 <div id="history-list">
                     <div style="text-align:center; padding:30px; color:#999;">Loading...</div>
                 </div>
@@ -1234,7 +1265,7 @@
                     </details>
                     <details style="margin-bottom:10px; background:#f9f9f9; border:1px solid #eee; border-radius:10px; padding:12px;">
                         <summary style="font-weight:700; cursor:pointer; font-size:14px;">💸 Withdraw কোথায় পাব?</summary>
-                        <p style="margin-top:8px; font-size:13px; color:#555;">শুধুমাত্র Winning Balance withdraw করা যাবে। Withdraw section থেকে request দিন।</p>
+                        <p style="margin-top:8px; font-size:13px; color:#555;">Deposit Balance এবং Winning Balance উভয় থেকেই withdraw করা যাবে। Withdraw section থেকে request দিন।</p>
                     </details>
                     <details style="margin-bottom:10px; background:#f9f9f9; border:1px solid #eee; border-radius:10px; padding:12px;">
                         <summary style="font-weight:700; cursor:pointer; font-size:14px;">🎮 Match Room ID কোথায় পাব?</summary>
@@ -2177,6 +2208,11 @@
                     document.getElementById('profile-page-deposit').innerText = depositBal + " ৳";
                     document.getElementById('profile-page-winning').innerText = winningBal + " ৳";
                     document.getElementById('withdraw-available-display').innerText = winningBal + " ৳";
+                    // ✅ Update withdraw section with all balances
+                    const depositDisp = document.getElementById('withdraw-deposit-display');
+                    const totalDisp = document.getElementById('withdraw-total-display');
+                    if(depositDisp) depositDisp.innerText = depositBal + " ৳";
+                    if(totalDisp) totalDisp.innerText = (depositBal + winningBal) + " ৳";
                     
                     document.getElementById('profile-page-phone').innerText = data.phone || '--';
                     document.getElementById('profile-page-name').innerText = data.username || data.email;
@@ -3130,15 +3166,22 @@ Admin verify করার পর আপনার balance যোগ হবে।
             if(amount < minWithdrawAmount) {
                 return alert(`Minimum Withdraw ${minWithdrawAmount} BDT`);
             }
-            if(amount > winningBal) return alert("Insufficient Winning Balance!");
+            
+            // ✅ Check total balance (deposit + winning)
+            const totalAvailable = depositBal + winningBal;
+            if(amount > totalAvailable) return alert("Insufficient Balance! আপনার মোট balance: " + totalAvailable + "৳");
             if(!number) return alert("Enter account number");
+
+            // ✅ Calculate how much to deduct from each balance
+            // First use winning balance, then deposit balance
+            let deductFromWinning = Math.min(amount, winningBal);
+            let deductFromDeposit = amount - deductFromWinning;
 
             const nowDate = new Date().toLocaleString('en-US', {
                 month: '2-digit', day: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit', hour12: true
             });
 
-            // push() এর ভেতরেই data দেওয়া
             push(ref(db, 'withdrawRequests'), {
                 userId: currentUser.uid,
                 userName: currentUser.displayName || currentUser.email,
@@ -3147,8 +3190,22 @@ Admin verify করার পর আপনার balance যোগ হবে।
                 phoneNumber: number,
                 status: 'pending',
                 date: nowDate,
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                deductFromWinning: deductFromWinning,   // ✅ Track how much from winning
+                deductFromDeposit: deductFromDeposit    // ✅ Track how much from deposit
             }).then(() => {
+                // ✅ Deduct from balances immediately
+                const updates = {};
+                if(deductFromWinning > 0) {
+                    updates[`users/${currentUser.uid}/winning`] = winningBal - deductFromWinning;
+                }
+                if(deductFromDeposit > 0) {
+                    updates[`users/${currentUser.uid}/deposit`] = depositBal - deductFromDeposit;
+                }
+                if(Object.keys(updates).length > 0) {
+                    update(ref(db), updates);
+                }
+                
                 push(ref(db, 'transactions/' + currentUser.uid), {
                     type: 'Withdraw',
                     method: method,
@@ -3640,10 +3697,10 @@ Admin verify করার পর আপনার balance যোগ হবে।
                         noticesHTML += `
                             <div class="notice-item">
                                 <div class="notice-item-title">
-                                    <span style="font-size: 20px;">${icon}</span>
+                                    <span style="font-size: 16px;">${icon}</span>
                                     <span>${notice.title || 'নোটিশ #' + (index + 1)}</span>
                                 </div>
-                                <div class="notice-item-text">${notice.content || ''}</div>
+                                <div class="notice-item-text">${(notice.content || '').replace(/(\d+\.|১\.|২\.|৩\.|৪\.|৫\.|৬\.|৭\.|৮\.|৯\.)/g, '<br>$1').replace(/^<br>/, '')}</div>
                             </div>
                         `;
                     });
