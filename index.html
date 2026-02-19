@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -432,17 +432,19 @@
             text-align: center;
             color: white;
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         
         .notice-popup-icon {
-            font-size: 40px;
-            margin-bottom: 8px;
+            font-size: 36px;
         }
         
         .notice-popup-title {
             font-size: 22px;
             font-weight: 700;
-            margin-bottom: 0;
         }
         
         .notice-popup-subtitle {
@@ -503,13 +505,61 @@
         #dynamic-notices {
             border-left: 4px solid #FF5500;
             padding-left: 20px;
-            padding-top: 5px;
-            padding-bottom: 5px;
+            padding-right: 10px;
+            padding-top: 10px;
+            padding-bottom: 10px;
             background: #fafafa;
             border-radius: 8px;
             font-size: 15px;
-            line-height: 1.7;
+            line-height: 1.8;
             color: #333;
+        }
+        
+        #dynamic-notices p {
+            margin-bottom: 15px;
+        }
+        
+        .notice-section-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        
+        .notice-welcome {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 15px 0;
+        }
+        
+        .notice-rule {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+        
+        .rule-number {
+            min-width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #5b9bd5, #4472c4);
+            color: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        
+        .rule-text {
+            flex: 1;
+            font-size: 15px;
+            line-height: 1.7;
         }
         
         .notice-popup-footer {
@@ -1183,19 +1233,20 @@
                 
                 <!-- Balance Selection -->
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
-                    <div style="background:#fff8e1; padding:15px; border:2px solid #ffd54f; border-radius:10px; text-align:center; cursor:pointer;" id="select-deposit-balance" onclick="selectWithdrawBalance('deposit')">
+                    <div style="background:#fff8e1; padding:15px; border:2px solid #ffd54f; border-radius:10px; text-align:center;" id="select-deposit-balance">
                         <span style="font-size:11px; color:#666; display:block; margin-bottom:5px;">Deposit Balance</span>
                         <h3 style="color:#f57f17; margin:0;" id="withdraw-deposit-display">0 ৳</h3>
                     </div>
-                    <div style="background:#f0fff4; padding:15px; border:2px solid #c6f6d5; border-radius:10px; text-align:center; cursor:pointer;" id="select-winning-balance" onclick="selectWithdrawBalance('winning')">
+                    <div style="background:#f0fff4; padding:15px; border:2px solid #c6f6d5; border-radius:10px; text-align:center;" id="select-winning-balance">
                         <span style="font-size:11px; color:#666; display:block; margin-bottom:5px;">Winning Balance</span>
                         <h3 style="color:#2f855a; margin:0;" id="withdraw-winning-display">0 ৳</h3>
                     </div>
                 </div>
                 
                 <div style="background:#e3f2fd; padding:10px; border:1px solid #90caf9; border-radius:8px; margin-bottom:20px; text-align:center;">
-                    <span style="font-size:12px; color:#1565c0;">Selected: <strong id="selected-balance-type">None</strong></span>
+                    <span style="font-size:12px; color:#1565c0;">Available for Withdraw</span>
                     <h2 style="color:#1565c0; margin:5px 0;" id="withdraw-available-display">0 ৳</h2>
+                    <span style="font-size:10px; color:#666;">(Total - 50৳ Reserve)</span>
                 </div>
                 <div class="form-group">
                     <label>Amount</label>
@@ -1446,28 +1497,28 @@
         
         // Function to select balance type for withdraw
         window.selectWithdrawBalance = (type) => {
-            selectedWithdrawType = type;
-            
-            // Reset border colors
-            document.getElementById('select-deposit-balance').style.border = '2px solid #ffd54f';
-            document.getElementById('select-winning-balance').style.border = '2px solid #c6f6d5';
-            
-            if(type === 'deposit') {
-                selectedWithdrawAmount = depositBal;
-                document.getElementById('select-deposit-balance').style.border = '3px solid #f57f17';
-                document.getElementById('selected-balance-type').innerText = 'Deposit Balance';
-                document.getElementById('selected-balance-type').style.color = '#f57f17';
-                document.getElementById('withdraw-available-display').innerText = depositBal + ' ৳';
-                document.getElementById('withdraw-available-display').style.color = '#f57f17';
-            } else if(type === 'winning') {
-                selectedWithdrawAmount = winningBal;
-                document.getElementById('select-winning-balance').style.border = '3px solid #2f855a';
-                document.getElementById('selected-balance-type').innerText = 'Winning Balance';
-                document.getElementById('selected-balance-type').style.color = '#2f855a';
-                document.getElementById('withdraw-available-display').innerText = winningBal + ' ৳';
-                document.getElementById('withdraw-available-display').style.color = '#2f855a';
-            }
+            // No selection needed - always show total
+            // This function can be removed but keeping for compatibility
         };
+        
+        // Update withdraw display to show total balance minus reserve
+        function updateWithdrawDisplay() {
+            const totalBalance = depositBal + winningBal;
+            const RESERVE_AMOUNT = 50; // Always keep 50 taka
+            const availableForWithdraw = Math.max(0, totalBalance - RESERVE_AMOUNT);
+            
+            // Update individual balance displays
+            document.getElementById('withdraw-deposit-display').innerText = depositBal + ' ৳';
+            document.getElementById('withdraw-winning-display').innerText = winningBal + ' ৳';
+            
+            // Update total available display
+            document.getElementById('selected-balance-type').innerText = 'Total Available';
+            document.getElementById('withdraw-available-display').innerText = availableForWithdraw + ' ৳';
+            
+            // Store for validation
+            window.maxWithdrawAmount = availableForWithdraw;
+            window.currentTotalBalance = totalBalance;
+        }
 
         // ==================== PERFORMANCE OPTIMIZATION ====================
         // Cache System - Reduce Database Calls by 70-80%
@@ -2946,6 +2997,7 @@
             const target = document.getElementById(sectionId);
             if(target) target.classList.add('active');
             if(sectionId === 'add-money') showStep(1);
+            if(sectionId === 'withdraw') updateWithdrawDisplay();
             if(sectionId === 'refer-system') loadUserReferSystem();
             if(sectionId === 'match-results') loadMatchResults();
             if(sectionId === 'tournament-guide') loadTournamentGuides();
@@ -3177,34 +3229,53 @@ Admin verify করার পর আপনার balance যোগ হবে।
             const number = document.getElementById('withdraw-number').value;
             const method = document.getElementById('withdraw-method').value;
 
-            // Check if balance type is selected
-            if(!selectedWithdrawType) {
-                return alert("⚠️ Please select balance type (Deposit or Winning)");
+            if(!amount || amount <= 0) {
+                return alert("⚠️ Please enter a valid amount");
             }
 
             if(amount < minWithdrawAmount) {
                 return alert(`Minimum Withdraw ${minWithdrawAmount} BDT`);
             }
             
-            if(amount > selectedWithdrawAmount) {
-                return alert(`Insufficient ${selectedWithdrawType === 'deposit' ? 'Deposit' : 'Winning'} Balance!`);
+            // Calculate available balance (Total - 50 reserve)
+            const totalBalance = depositBal + winningBal;
+            const RESERVE_AMOUNT = 50;
+            const maxWithdraw = Math.max(0, totalBalance - RESERVE_AMOUNT);
+            
+            if(amount > maxWithdraw) {
+                return alert(`❌ Insufficient Balance! You can withdraw maximum ${maxWithdraw} ৳\n(50 ৳ must remain as reserve)`);
             }
             
             if(!number) return alert("Enter account number");
+
+            // Calculate deduction from winning and deposit
+            let fromWinning = 0;
+            let fromDeposit = 0;
+            
+            if(amount <= winningBal) {
+                // Deduct everything from winning
+                fromWinning = amount;
+                fromDeposit = 0;
+            } else {
+                // Deduct all winning, rest from deposit
+                fromWinning = winningBal;
+                fromDeposit = amount - winningBal;
+            }
 
             const nowDate = new Date().toLocaleString('en-US', {
                 month: '2-digit', day: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit', hour12: true
             });
 
-            // push() এর ভেতরেই data দেওয়া
+            // Submit withdraw request
             push(ref(db, 'withdrawRequests'), {
                 userId: currentUser.uid,
                 userName: currentUser.displayName || currentUser.email,
                 method: method,
                 amount: parseInt(amount),
                 phoneNumber: number,
-                balanceType: selectedWithdrawType,
+                fromWinning: fromWinning,
+                fromDeposit: fromDeposit,
                 status: 'pending',
                 date: nowDate,
                 timestamp: Date.now()
@@ -3214,18 +3285,14 @@ Admin verify করার পর আপনার balance যোগ হবে।
                     method: method,
                     amount: amount,
                     account: number,
-                    balanceType: selectedWithdrawType,
+                    fromWinning: fromWinning,
+                    fromDeposit: fromDeposit,
                     status: 'Pending',
                     date: nowDate
                 });
                 alert("✅ Withdraw Request Sent! Admin approve করলে পাঠিয়ে দেওয়া হবে।");
                 document.getElementById('withdraw-amount').value = "";
-                selectedWithdrawType = null;
-                selectedWithdrawAmount = 0;
-                document.getElementById('selected-balance-type').innerText = 'None';
-                document.getElementById('withdraw-available-display').innerText = '0 ৳';
-                document.getElementById('select-deposit-balance').style.border = '2px solid #ffd54f';
-                document.getElementById('select-winning-balance').style.border = '2px solid #c6f6d5';
+                document.getElementById('withdraw-number').value = "";
                 navigate('history');
             }).catch(e => alert('Error: ' + e.message));
         };
