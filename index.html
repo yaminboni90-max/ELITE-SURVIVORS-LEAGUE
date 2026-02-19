@@ -1171,11 +1171,24 @@
                 <button onclick="navigate('home')" class="back-button">
                     <i class="fas fa-arrow-left"></i> Back to Home
                 </button>
-                <h3>Withdraw Winning Funds</h3>
-                <p style="font-size:12px; color:#666; margin-bottom:20px;">Note: You can only withdraw your winning balance. Deposit balance cannot be withdrawn.</p>
-                <div style="background:#f0fff4; padding:10px; border:1px solid #c6f6d5; border-radius:8px; margin-bottom:20px; text-align:center;">
-                    <span style="font-size:12px; color:#2f855a;">Available for Withdraw</span>
-                    <h2 style="color:#2f855a;" id="withdraw-available-display">0 ৳</h2>
+                <h3>Withdraw Funds</h3>
+                <p style="font-size:12px; color:#666; margin-bottom:20px;">Note: You can withdraw both deposit and winning balance. Minimum amount required.</p>
+                
+                <!-- Balance Selection -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
+                    <div style="background:#fff8e1; padding:15px; border:2px solid #ffd54f; border-radius:10px; text-align:center; cursor:pointer;" id="select-deposit-balance" onclick="selectWithdrawBalance('deposit')">
+                        <span style="font-size:11px; color:#666; display:block; margin-bottom:5px;">Deposit Balance</span>
+                        <h3 style="color:#f57f17; margin:0;" id="withdraw-deposit-display">0 ৳</h3>
+                    </div>
+                    <div style="background:#f0fff4; padding:15px; border:2px solid #c6f6d5; border-radius:10px; text-align:center; cursor:pointer;" id="select-winning-balance" onclick="selectWithdrawBalance('winning')">
+                        <span style="font-size:11px; color:#666; display:block; margin-bottom:5px;">Winning Balance</span>
+                        <h3 style="color:#2f855a; margin:0;" id="withdraw-winning-display">0 ৳</h3>
+                    </div>
+                </div>
+                
+                <div style="background:#e3f2fd; padding:10px; border:1px solid #90caf9; border-radius:8px; margin-bottom:20px; text-align:center;">
+                    <span style="font-size:12px; color:#1565c0;">Selected: <strong id="selected-balance-type">None</strong></span>
+                    <h2 style="color:#1565c0; margin:5px 0;" id="withdraw-available-display">0 ৳</h2>
                 </div>
                 <div class="form-group">
                     <label>Amount</label>
@@ -1234,7 +1247,7 @@
                     </details>
                     <details style="margin-bottom:10px; background:#f9f9f9; border:1px solid #eee; border-radius:10px; padding:12px;">
                         <summary style="font-weight:700; cursor:pointer; font-size:14px;">💸 Withdraw কোথায় পাব?</summary>
-                        <p style="margin-top:8px; font-size:13px; color:#555;">শুধুমাত্র Winning Balance withdraw করা যাবে। Withdraw section থেকে request দিন।</p>
+                        <p style="margin-top:8px; font-size:13px; color:#555;">Deposit এবং Winning উভয় Balance withdraw করা যাবে। Minimum amount এর বেশি হলে Withdraw section থেকে request দিন।</p>
                     </details>
                     <details style="margin-bottom:10px; background:#f9f9f9; border:1px solid #eee; border-radius:10px; padding:12px;">
                         <summary style="font-weight:700; cursor:pointer; font-size:14px;">🎮 Match Room ID কোথায় পাব?</summary>
@@ -1421,6 +1434,33 @@
         // Settings variables
         let minDepositAmount = 50; // Default
         let minWithdrawAmount = 100; // Default
+        let selectedWithdrawType = null; // 'deposit' or 'winning'
+        let selectedWithdrawAmount = 0;
+        
+        // Function to select balance type for withdraw
+        window.selectWithdrawBalance = (type) => {
+            selectedWithdrawType = type;
+            
+            // Reset border colors
+            document.getElementById('select-deposit-balance').style.border = '2px solid #ffd54f';
+            document.getElementById('select-winning-balance').style.border = '2px solid #c6f6d5';
+            
+            if(type === 'deposit') {
+                selectedWithdrawAmount = depositBal;
+                document.getElementById('select-deposit-balance').style.border = '3px solid #f57f17';
+                document.getElementById('selected-balance-type').innerText = 'Deposit Balance';
+                document.getElementById('selected-balance-type').style.color = '#f57f17';
+                document.getElementById('withdraw-available-display').innerText = depositBal + ' ৳';
+                document.getElementById('withdraw-available-display').style.color = '#f57f17';
+            } else if(type === 'winning') {
+                selectedWithdrawAmount = winningBal;
+                document.getElementById('select-winning-balance').style.border = '3px solid #2f855a';
+                document.getElementById('selected-balance-type').innerText = 'Winning Balance';
+                document.getElementById('selected-balance-type').style.color = '#2f855a';
+                document.getElementById('withdraw-available-display').innerText = winningBal + ' ৳';
+                document.getElementById('withdraw-available-display').style.color = '#2f855a';
+            }
+        };
 
         // ==================== PERFORMANCE OPTIMIZATION ====================
         // Cache System - Reduce Database Calls by 70-80%
@@ -2176,7 +2216,10 @@
                     document.getElementById('header-balance').innerText = totalBal;
                     document.getElementById('profile-page-deposit').innerText = depositBal + " ৳";
                     document.getElementById('profile-page-winning').innerText = winningBal + " ৳";
-                    document.getElementById('withdraw-available-display').innerText = winningBal + " ৳";
+                    
+                    // Update withdraw page balances
+                    document.getElementById('withdraw-deposit-display').innerText = depositBal + " ৳";
+                    document.getElementById('withdraw-winning-display').innerText = winningBal + " ৳";
                     
                     document.getElementById('profile-page-phone').innerText = data.phone || '--';
                     document.getElementById('profile-page-name').innerText = data.username || data.email;
@@ -3127,10 +3170,19 @@ Admin verify করার পর আপনার balance যোগ হবে।
             const number = document.getElementById('withdraw-number').value;
             const method = document.getElementById('withdraw-method').value;
 
+            // Check if balance type is selected
+            if(!selectedWithdrawType) {
+                return alert("⚠️ Please select balance type (Deposit or Winning)");
+            }
+
             if(amount < minWithdrawAmount) {
                 return alert(`Minimum Withdraw ${minWithdrawAmount} BDT`);
             }
-            if(amount > winningBal) return alert("Insufficient Winning Balance!");
+            
+            if(amount > selectedWithdrawAmount) {
+                return alert(`Insufficient ${selectedWithdrawType === 'deposit' ? 'Deposit' : 'Winning'} Balance!`);
+            }
+            
             if(!number) return alert("Enter account number");
 
             const nowDate = new Date().toLocaleString('en-US', {
@@ -3145,6 +3197,7 @@ Admin verify করার পর আপনার balance যোগ হবে।
                 method: method,
                 amount: parseInt(amount),
                 phoneNumber: number,
+                balanceType: selectedWithdrawType,
                 status: 'pending',
                 date: nowDate,
                 timestamp: Date.now()
@@ -3154,11 +3207,18 @@ Admin verify করার পর আপনার balance যোগ হবে।
                     method: method,
                     amount: amount,
                     account: number,
+                    balanceType: selectedWithdrawType,
                     status: 'Pending',
                     date: nowDate
                 });
                 alert("✅ Withdraw Request Sent! Admin approve করলে পাঠিয়ে দেওয়া হবে।");
                 document.getElementById('withdraw-amount').value = "";
+                selectedWithdrawType = null;
+                selectedWithdrawAmount = 0;
+                document.getElementById('selected-balance-type').innerText = 'None';
+                document.getElementById('withdraw-available-display').innerText = '0 ৳';
+                document.getElementById('select-deposit-balance').style.border = '2px solid #ffd54f';
+                document.getElementById('select-winning-balance').style.border = '2px solid #c6f6d5';
                 navigate('history');
             }).catch(e => alert('Error: ' + e.message));
         };
@@ -3212,11 +3272,12 @@ Admin verify করার পর আপনার balance যোগ হবে।
                             `;
                         }
                         
+                         const balanceTypeLabel = trx.balanceType ? ` [${trx.balanceType === 'deposit' ? 'Deposit' : 'Winning'}]` : '';
                          const html = `
                          <div style="display:flex; flex-direction:column; padding:15px; border-bottom:1px solid #eee;">
                             <div style="display:flex; justify-content:space-between;">
                                 <div>
-                                    <h4 style="font-size:14px; color:#333;">${trx.type === 'Prize' ? `${trx.type} ${trx.matchTitle ? '- ' + trx.matchTitle : ''}` : `${trx.type} (${trx.method})`}</h4>
+                                    <h4 style="font-size:14px; color:#333;">${trx.type === 'Prize' ? `${trx.type} ${trx.matchTitle ? '- ' + trx.matchTitle : ''}` : `${trx.type} (${trx.method})${balanceTypeLabel}`}</h4>
                                     <p style="font-size:11px; color:#888;">${trx.date}</p>
                                 </div>
                                 <div style="text-align:right;">
@@ -4207,6 +4268,122 @@ Admin verify করার পর আপনার balance যোগ হবে।
                 `;
             }
         }
+
+        // ======= BACK BUTTON HANDLER (Mobile & PC) =======
+        let backPressCount = 0;
+        let backPressTimer = null;
+        
+        // Initialize history state for proper back button handling
+        function initBackButtonHandler() {
+            // Push initial state to history
+            if (!window.history.state || !window.history.state.page) {
+                window.history.replaceState({ page: 'home' }, '', window.location.href);
+            }
+            
+            // Listen for back button (browser back, mobile system back)
+            window.addEventListener('popstate', handleBackButton);
+            
+            // Also handle manual navigation to update history
+            const originalNavigate = window.navigate;
+            window.navigate = function(sectionId) {
+                // Call original navigate function
+                originalNavigate(sectionId);
+                
+                // Push state to history for non-home pages
+                if (sectionId !== 'home') {
+                    window.history.pushState({ page: sectionId }, '', `#${sectionId}`);
+                }
+            };
+        }
+        
+        function handleBackButton(event) {
+            // Get all sections
+            const allSections = document.querySelectorAll('.app-section');
+            let currentSection = null;
+            
+            // Find which section is currently active
+            allSections.forEach(section => {
+                if (section.classList.contains('active')) {
+                    currentSection = section.id;
+                }
+            });
+            
+            // Check if auth page is open
+            const loginPage = document.getElementById('login-page');
+            const registerPage = document.getElementById('register-page');
+            const isAuthPageOpen = (loginPage && loginPage.classList.contains('active')) || 
+                                   (registerPage && registerPage.classList.contains('active'));
+            
+            // If auth page is open, close it
+            if (isAuthPageOpen) {
+                closeAuthPage();
+                // Push state back
+                window.history.pushState({ page: currentSection || 'home' }, '', window.location.href);
+                return;
+            }
+            
+            // If sidebar is open, close it
+            const sidebar = document.getElementById('sidebar');
+            const notifSidebar = document.getElementById('notif-sidebar');
+            if ((sidebar && sidebar.classList.contains('active')) || 
+                (notifSidebar && notifSidebar.classList.contains('active'))) {
+                toggleMenu();
+                // Push state back
+                window.history.pushState({ page: currentSection || 'home' }, '', window.location.href);
+                return;
+            }
+            
+            // If we're on home page
+            if (!currentSection || currentSection === 'home') {
+                handleExitApp();
+            } else {
+                // Navigate back to home
+                navigate('home');
+            }
+        }
+        
+        function handleExitApp() {
+            backPressCount++;
+            
+            if (backPressCount === 1) {
+                // First press - show toast
+                showToast('Press back again to exit', 'info');
+                
+                // Push a dummy state so next back press triggers popstate
+                window.history.pushState({ page: 'home' }, '', window.location.href);
+                
+                // Reset counter after 2 seconds
+                backPressTimer = setTimeout(() => {
+                    backPressCount = 0;
+                }, 2000);
+            } else if (backPressCount === 2) {
+                // Second press within 2 seconds - exit app
+                clearTimeout(backPressTimer);
+                backPressCount = 0;
+                
+                // Try to close the app/tab
+                // For PWA or mobile browser
+                if (window.navigator && window.navigator.app) {
+                    window.navigator.app.exitApp();
+                } else if (window.navigator && window.navigator.device) {
+                    window.navigator.device.exitApp();
+                } else {
+                    // For regular browser - try to close tab
+                    window.close();
+                    
+                    // If window.close() doesn't work (most modern browsers block it)
+                    // Show a final message
+                    setTimeout(() => {
+                        showToast('Please close the browser tab manually', 'info');
+                    }, 100);
+                }
+            }
+        }
+        
+        // Initialize back button handler when page loads
+        window.addEventListener('load', () => {
+            initBackButtonHandler();
+        });
 
 
     </script>
