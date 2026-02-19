@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -170,25 +170,26 @@
         }
 
         .game-card {
-            height: 120px; border-radius: 12px; overflow: hidden; position: relative; cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15); display: flex; align-items: center; padding: 0 12px;
-            transition: transform 0.2s; background-color: #000;
+            min-height: 180px; border-radius: 12px; overflow: hidden; position: relative; cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15); display: flex; flex-direction: column; align-items: center; 
+            justify-content: center; padding: 20px 15px;
+            transition: transform 0.2s; background-color: #000; text-align: center;
         }
         .game-card-bg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background-size: cover; background-position: center; opacity: 0.6; z-index: 1; transition: opacity 0.3s;
         }
         .game-card:hover .game-card-bg { opacity: 0.4; }
-        .game-card-content { position: relative; z-index: 2; display: flex; align-items: center; gap: 15px; width: 100%; }
+        .game-card-content { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
         .game-avatar { 
-            width: 60px; height: 60px; border-radius: 50%; 
+            width: 70px; height: 70px; border-radius: 50%; 
             border: 3px solid #fff; background: #fff; 
             display: flex; align-items: center; justify-content: center;
-            font-size: 32px; flex-shrink: 0;
+            font-size: 36px; flex-shrink: 0; margin-bottom: 8px;
         }
-        .game-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .game-title { color: #fff; font-size: 20px; font-weight: 800; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
-        .match-count { color: #fff; font-size: 13px; font-weight: 500; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+        .game-info { width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .game-title { color: #fff; font-size: 16px; font-weight: 800; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.8); line-height: 1.3; }
+        .match-count { color: #fff; font-size: 13px; font-weight: 500; margin-top: 6px; display: flex; align-items: center; gap: 5px; justify-content: center; }
         .match-count::before { content: ''; display: inline-block; width: 6px; height: 6px; background: #00ff00; border-radius: 50%; }
 
         /* --- MATCH VIEW --- */
@@ -398,9 +399,9 @@
         
         .notice-popup-box {
             background: white;
-            width: 90%;
-            max-width: 500px;
-            max-height: 80vh;
+            width: 92%;
+            max-width: 600px;
+            max-height: 85vh;
             border-radius: 16px;
             overflow: hidden;
             box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
@@ -426,82 +427,89 @@
         }
         
         .notice-popup-header {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            padding: 25px 20px;
+            background: linear-gradient(135deg, #FF5500 0%, #b83280 100%);
+            padding: 20px;
             text-align: center;
             color: white;
             position: relative;
         }
         
         .notice-popup-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-            animation: bounce 1s infinite;
-        }
-        
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            font-size: 40px;
+            margin-bottom: 8px;
         }
         
         .notice-popup-title {
-            font-size: 24px;
-            font-weight: 800;
-            margin-bottom: 5px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 0;
         }
         
         .notice-popup-subtitle {
-            font-size: 14px;
-            opacity: 0.9;
+            display: none;
         }
         
         .notice-popup-content {
-            padding: 25px 20px;
+            padding: 20px;
             overflow-y: auto;
             flex: 1;
         }
         
         .notice-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            border-left: 4px solid var(--primary);
+            background: #ffffff;
+            padding: 0;
+            border-radius: 0;
+            margin-bottom: 0;
+            border-left: none;
             position: relative;
         }
         
         .notice-item-title {
-            font-size: 16px;
+            font-size: 17px;
             font-weight: 700;
             color: #222;
-            margin-bottom: 8px;
+            margin-bottom: 15px;
             display: flex;
             align-items: center;
             gap: 8px;
         }
         
         .notice-item-text {
-            font-size: 14px;
-            color: #555;
-            line-height: 1.6;
+            font-size: 15px;
+            color: #333;
+            line-height: 1.7;
+            white-space: pre-wrap;
         }
         
         .notice-highlight {
             background: #fff3cd;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #ffc107;
-            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #ffc107;
+            margin-bottom: 20px;
         }
         
         .notice-highlight-text {
-            font-size: 13px;
+            font-size: 14px;
             color: #856404;
             font-weight: 600;
             display: flex;
-            align-items: flex-start;
-            gap: 8px;
+            align-items: center;
+            gap: 10px;
+            line-height: 1.6;
+        }
+        
+        /* Dynamic content with left orange border */
+        #dynamic-notices {
+            border-left: 4px solid #FF5500;
+            padding-left: 20px;
+            padding-top: 5px;
+            padding-bottom: 5px;
+            background: #fafafa;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.7;
+            color: #333;
         }
         
         .notice-popup-footer {
@@ -513,16 +521,16 @@
         .btn-got-it {
             width: 100%;
             padding: 16px;
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            background: linear-gradient(90deg, #FF5500 0%, #b83280 100%);
             color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: 700;
             cursor: pointer;
             text-transform: uppercase;
             letter-spacing: 1px;
-            box-shadow: 0 5px 15px rgba(255, 85, 0, 0.3);
+            box-shadow: 0 4px 15px rgba(255, 85, 0, 0.3);
             transition: all 0.3s ease;
         }
         
@@ -718,7 +726,6 @@
             <div class="notice-popup-header">
                 <div class="notice-popup-icon">📢</div>
                 <div class="notice-popup-title">গুরুত্বপূর্ণ নোটিশ</div>
-                <div class="notice-popup-subtitle">অনুগ্রহ করে সম্পূর্ণ পড়ুন</div>
             </div>
             
             <div class="notice-popup-content" id="noticeContent">
@@ -3635,22 +3642,22 @@ Admin verify করার পর আপনার balance যোগ হবে।
                 
                 container.innerHTML = `
                     <div style="margin-bottom:20px; padding-bottom:15px; border-bottom:2px solid #f0f0f0;">
-                        <h3 style="font-size:18px; font-weight:700; color:#333; margin-bottom:8px;">
+                        <h3 style="font-size:20px; font-weight:700; color:#333; margin-bottom:8px;">
                             📋 Game Rules & Regulations
                         </h3>
-                        <p style="font-size:12px; color:#888;">
+                        <p style="font-size:13px; color:#888;">
                             <i class="far fa-clock"></i> Last Updated: ${lastUpdated}
                         </p>
                     </div>
                     
-                    <div style="background:#f8f9fa; padding:20px; border-radius:10px; border-left:4px solid #667eea;">
-                        <div style="font-size:14px; color:#333; line-height:1.8; white-space:pre-wrap;">${data.content}</div>
+                    <div style="background:#f8f9fa; padding:22px; border-radius:10px; border-left:5px solid #667eea;">
+                        <div style="font-size:16px; color:#333; line-height:1.8; white-space:pre-wrap;">${data.content}</div>
                     </div>
                     
-                    <div style="margin-top:20px; padding:15px; background:#fff3cd; border-radius:8px; border:1px solid #ffc107;">
+                    <div style="margin-top:20px; padding:16px; background:#fff3cd; border-radius:8px; border:2px solid #ffc107;">
                         <div style="display:flex; align-items:flex-start; gap:10px;">
-                            <i class="fas fa-exclamation-triangle" style="color:#856404; font-size:18px; margin-top:2px;"></i>
-                            <p style="font-size:13px; color:#856404; font-weight:600; line-height:1.6;">
+                            <i class="fas fa-exclamation-triangle" style="color:#856404; font-size:20px; margin-top:2px;"></i>
+                            <p style="font-size:15px; color:#856404; font-weight:600; line-height:1.7;">
                                 <strong>Important:</strong> All players must follow these rules. Violation of any rule may result in account suspension or ban.
                             </p>
                         </div>
@@ -3685,31 +3692,26 @@ Admin verify করার পর আপনার balance যোগ হবে।
                         </div>
                     `;
                 } else {
-                    let noticesHTML = '';
+                    // Show content directly as it comes from Firebase
+                    let contentHTML = '';
                     
-                    data.notices.forEach((notice, index) => {
-                        const iconMap = {
-                            'important': '⚠️',
-                            'info': 'ℹ️',
-                            'warning': '🚨',
-                            'update': '🔔',
-                            'news': '📰'
-                        };
-                        
-                        const icon = iconMap[notice.type] || '📌';
-                        
-                        noticesHTML += `
-                            <div class="notice-item">
-                                <div class="notice-item-title">
-                                    <span style="font-size: 20px;">${icon}</span>
-                                    <span>${notice.title || 'নোটিশ #' + (index + 1)}</span>
-                                </div>
-                                <div class="notice-item-text">${notice.content || ''}</div>
-                            </div>
-                        `;
-                    });
+                    // If it's an array of notices
+                    if (Array.isArray(data.notices)) {
+                        data.notices.forEach((notice, index) => {
+                            const content = notice.content || notice.title || '';
+                            contentHTML += content + '\n\n';
+                        });
+                    } 
+                    // If it's a single content string
+                    else if (data.content) {
+                        contentHTML = data.content;
+                    }
+                    // If notices is object
+                    else if (typeof data.notices === 'object') {
+                        contentHTML = data.notices.content || JSON.stringify(data.notices);
+                    }
                     
-                    noticeContainer.innerHTML = noticesHTML;
+                    noticeContainer.innerHTML = contentHTML.replace(/\n/g, '<br>');
                 }
                 
                 // Show the popup
