@@ -2883,27 +2883,12 @@
             }
         }
 
-        // ========== NAVIGATION HISTORY STACK ==========
-        let navStack = ['home'];
-        let backPressCount = 0;
-        let backPressTimer = null;
-
         window.navigate = (sectionId) => {
             if((sectionId === 'profile' || sectionId === 'account-settings' || sectionId === 'add-money' || sectionId === 'withdraw' || sectionId === 'history' || sectionId === 'refer-system' || sectionId === 'match-results' || sectionId === 'leaderboard' || sectionId === 'match-history') && !currentUser) {
                 showAuthPage('login');
                 return;
             }
             
-            // Stack এ push করো (home reset করে, অন্যগুলো add করে)
-            if(sectionId === 'home') {
-                navStack = ['home'];
-            } else {
-                // একই section দুইবার না রাখার জন্য
-                if(navStack[navStack.length - 1] !== sectionId) {
-                    navStack.push(sectionId);
-                }
-            }
-
             // Load section data on-demand
             loadSectionData(sectionId);
             
@@ -2917,117 +2902,11 @@
             if(sectionId === 'rules') loadGameRules();
             if(sectionId === 'leaderboard') loadLeaderboard('weekly');
             if(sectionId === 'match-history') loadMatchHistory();
-            if(sectionId === 'faq' || sectionId === 'terms') {} // Static content
+            if(sectionId === 'faq' || sectionId === 'terms') {}
             
             closeAllSidebars();
             window.scrollTo(0,0);
         };
-
-        // ========== BACK NAVIGATION FUNCTION ==========
-        function goBack() {
-            // Auth page খোলা থাকলে বন্ধ করো
-            const authPages = document.querySelectorAll('.auth-page.active');
-            if(authPages.length > 0) {
-                authPages.forEach(p => p.classList.remove('active'));
-                return;
-            }
-
-            // Sidebar খোলা থাকলে বন্ধ করো
-            const sidebar = document.querySelector('.sidebar.active');
-            const notifSidebar = document.querySelector('.notif-sidebar.active');
-            if(sidebar || notifSidebar) {
-                closeAllSidebars();
-                return;
-            }
-
-            // Stack এ যদি আগের page থাকে
-            if(navStack.length > 1) {
-                navStack.pop(); // current সরাও
-                const prevSection = navStack[navStack.length - 1];
-                
-                // navigate না করে directly show করো (stack duplicate এড়াতে)
-                loadSectionData(prevSection);
-                document.querySelectorAll('.app-section').forEach(el => el.classList.remove('active'));
-                const target = document.getElementById(prevSection);
-                if(target) target.classList.add('active');
-                window.scrollTo(0,0);
-                return;
-            }
-
-            // Home এ আছি — exit confirmation
-            backPressCount++;
-            if(backPressCount === 1) {
-                showExitToast();
-                backPressTimer = setTimeout(() => {
-                    backPressCount = 0;
-                }, 2000);
-            } else if(backPressCount >= 2) {
-                clearTimeout(backPressTimer);
-                // App close (PWA/WebView)
-                if(window.AndroidInterface && window.AndroidInterface.exitApp) {
-                    window.AndroidInterface.exitApp();
-                } else {
-                    window.close();
-                }
-            }
-        }
-
-        // Exit toast দেখানো
-        function showExitToast() {
-            let toast = document.getElementById('exit-toast');
-            if(!toast) {
-                toast = document.createElement('div');
-                toast.id = 'exit-toast';
-                toast.style.cssText = `
-                    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
-                    background: rgba(0,0,0,0.85); color: white; padding: 12px 24px;
-                    border-radius: 50px; font-size: 14px; font-weight: 600;
-                    z-index: 99999; display: flex; align-items: center; gap: 10px;
-                    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                    animation: fadeIn 0.2s ease;
-                `;
-                toast.innerHTML = '<img src="icons/icon-192.png" style="width:24px;height:24px;border-radius:50%;" onerror="this.style.display=&quot;none&quot;"> Tap back once more to exit';
-                document.body.appendChild(toast);
-            }
-            toast.style.display = 'flex';
-            setTimeout(() => { toast.style.display = 'none'; backPressCount = 0; }, 2000);
-        }
-
-        // ========== ANDROID BACK BUTTON - Keyboard event ==========
-        document.addEventListener('keydown', (e) => {
-            if(e.key === 'Escape' || e.keyCode === 27) {
-                goBack();
-            }
-        });
-
-        // Android WebView back button support
-        window.onBackPressed = function() {
-            goBack();
-            return true;
-        };
-
-        // ========== SWIPE GESTURE (ডান থেকে বাম টান) ==========
-        let touchStartX = 0;
-        let touchStartY = 0;
-
-        document.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-            touchStartY = e.touches[0].clientY;
-        }, { passive: true });
-
-        document.addEventListener('touchend', (e) => {
-            const touchEndX = e.changedTouches[0].clientX;
-            const touchEndY = e.changedTouches[0].clientY;
-            const diffX = touchEndX - touchStartX;
-            const diffY = Math.abs(touchEndY - touchStartY);
-
-            // ডান দিক থেকে swipe (edge থেকে শুরু হলে) — 80px এর বেশি টানলে back
-            if(touchStartX < 30 && diffX > 80 && diffY < 100) {
-                goBack();
-            }
-        }, { passive: true });
-        // ========== END BACK NAVIGATION ==========
-
         window.copyToClipboard = (text) => {
             navigator.clipboard.writeText(text);
             alert("Copied: " + text);
