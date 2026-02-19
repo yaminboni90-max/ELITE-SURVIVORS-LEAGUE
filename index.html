@@ -137,19 +137,29 @@
         .section-title { font-weight: 800; font-size: 18px; margin: 15px 0; color: var(--text-dark); border-left: 4px solid var(--primary); padding-left: 10px; }
 
         /* --- GRID SYSTEM --- */
-        /* Default: Mobile 1 column */
-        .category-list, #matches-container {
+        /* Categories: Always 2 Columns (Mobile, Tablet, Desktop) */
+        .category-list {
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 12px;
+        }
+        
+        /* Matches: Mobile 1 column */
+        #matches-container {
             display: flex; 
             flex-direction: column; 
             gap: 15px;
         }
 
-        /* Tablet: 2 Columns */
+        /* Tablet: Matches 2 Columns */
         @media (min-width: 768px) {
-            .category-list, #matches-container {
+            #matches-container {
                 display: grid; 
                 grid-template-columns: repeat(2, 1fr); 
                 gap: 20px; 
+            }
+            .category-list {
+                gap: 15px;
             }
         }
         
@@ -161,33 +171,30 @@
                 grid-template-columns: repeat(4, 1fr); 
                 gap: 20px; 
             }
-            /* Categories: 2 Columns */
+            /* Categories: Still 2 Columns */
             .category-list {
-                display: grid; 
-                grid-template-columns: repeat(2, 1fr); 
                 gap: 20px; 
             }
         }
 
         .game-card {
             background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-            border-radius: 15px;
+            border-radius: 12px;
             overflow: hidden;
             position: relative;
             cursor: pointer;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 30px 20px;
+            padding: 20px 15px;
             transition: transform 0.3s, box-shadow 0.3s;
-            min-height: 200px;
             aspect-ratio: 1;
         }
         .game-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 6px 25px rgba(0,0,0,0.3);
         }
         
         .game-card-content { 
@@ -196,22 +203,22 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 15px;
+            gap: 10px;
             width: 100%;
             text-align: center;
         }
         
         .game-avatar { 
-            width: 80px;
-            height: 80px;
+            width: 70px;
+            height: 70px;
             border-radius: 50%; 
             background: rgba(255,255,255,1);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 45px;
+            font-size: 38px;
             flex-shrink: 0;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
         
         .game-info {
@@ -221,33 +228,34 @@
             align-items: center;
             justify-content: center;
             width: 100%;
+            gap: 5px;
         }
         
         .game-title {
             color: #fff;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 800;
             text-transform: uppercase;
             text-align: center;
-            line-height: 1.3;
+            line-height: 1.2;
             margin: 0;
         }
         
         .match-count {
             color: #4ade80;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
-            margin-top: 5px;
+            margin-top: 2px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
         
         .match-count::before {
             content: '';
             display: inline-block;
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             background: #4ade80;
             border-radius: 50%;
             box-shadow: 0 0 10px #4ade80;
