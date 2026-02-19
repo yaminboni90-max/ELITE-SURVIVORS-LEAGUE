@@ -21,10 +21,7 @@
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', 'Hind Siliguri', sans-serif; -webkit-tap-highlight-color: transparent; }
-        body { 
-            background-color: #f8f9fa;
-            padding-bottom: 80px; overflow-x: hidden; min-height: 100vh;
-        }
+        body { background-color: var(--bg-color); padding-bottom: 80px; overflow-x: hidden; min-height: 100vh;}
         a { text-decoration: none; color: inherit; }
 
         /* --- HEADER --- */
@@ -41,11 +38,7 @@
         }
         .logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .logo img { height: 45px; object-fit: contain; }
-        .logo-text { 
-            font-weight: 800; font-size: 22px; 
-            color: var(--primary); 
-            letter-spacing: -0.5px; 
-        }
+        .logo-text { font-weight: 800; font-size: 22px; color: var(--primary); letter-spacing: -0.5px; }
         
         .header-right { display: flex; align-items: center; gap: 10px; }
         
@@ -77,8 +70,7 @@
         /* --- AUTH PAGES (FULL SCREEN) --- */
         .auth-page {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white;
-            z-index: 2000; overflow-y: auto; display: none;
+            background: white; z-index: 2000; overflow-y: auto; display: none;
             flex-direction: column; align-items: center; justify-content: center; padding: 20px;
         }
         .auth-page.active { display: flex; animation: fadeIn 0.3s; }
@@ -96,69 +88,42 @@
 
         .sidebar {
             position: fixed; top: 0; right: -320px; width: var(--sidebar-width); height: 100%;
-            background: rgba(10, 14, 39, 0.95);
-            backdrop-filter: blur(20px);
-            border-left: 2px solid rgba(255, 107, 0, 0.3);
-            z-index: 999; transition: right 0.3s cubic-bezier(0.77, 0, 0.175, 1);
-            box-shadow: -5px 0 30px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+            background: white; z-index: 999; transition: right 0.3s cubic-bezier(0.77, 0, 0.175, 1);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column;
         }
         .sidebar.active { right: 0; }
         
         .notif-sidebar {
             position: fixed; top: 0; right: -320px; width: var(--sidebar-width); height: 100%;
-            background: rgba(10, 14, 39, 0.95);
-            backdrop-filter: blur(20px);
-            border-left: 2px solid rgba(0, 212, 255, 0.3);
-            z-index: 999; transition: right 0.3s cubic-bezier(0.77, 0, 0.175, 1);
-            box-shadow: -5px 0 30px rgba(0,0,0,0.5); display: flex; flex-direction: column;
+            background: white; z-index: 999; transition: right 0.3s cubic-bezier(0.77, 0, 0.175, 1);
+            box-shadow: -5px 0 15px rgba(0,0,0,0.1); display: flex; flex-direction: column;
         }
         .notif-sidebar.active { right: 0; }
 
         .sidebar-header {
-            padding: 30px 20px; 
-            border-bottom: 1px solid rgba(255, 107, 0, 0.3); 
-            display: flex; flex-direction: column; 
-            align-items: center; gap: 10px; 
-            background: rgba(255, 255, 255, 0.03);
-            position: relative;
+            padding: 30px 20px; border-bottom: 1px solid #f0f0f0; display: flex; flex-direction: column; 
+            align-items: center; gap: 10px; background: #fff; position: relative;
         }
-        .sidebar-close { position: absolute; top: 15px; right: 20px; font-size: 24px; color: var(--text-light); cursor: pointer; }
-        .sidebar-close:hover { color: #ff6b00; }
+        .sidebar-close { position: absolute; top: 15px; right: 20px; font-size: 24px; color: #999; cursor: pointer; }
         .sidebar-avatar {
             width: 70px; height: 70px; border-radius: 50%; background: #eee; object-fit: cover;
-            border: 3px solid #ff6b00; padding: 2px;
-            box-shadow: 0 0 20px rgba(255, 107, 0, 0.5);
+            border: 3px solid var(--primary); padding: 2px;
         }
-        .user-info { text-align: center; color: var(--white); }
+        .user-info { text-align: center; }
         
         .sidebar-menu { list-style: none; padding: 15px 0; overflow-y: auto; flex: 1; }
         .sidebar-menu li {
-            padding: 14px 25px; cursor: pointer; font-size: 15px; color: var(--text-light); 
-            display: flex; align-items: center; gap: 15px;
-            transition: all 0.2s; font-weight: 500; border-left: 4px solid transparent;
+            padding: 14px 25px; cursor: pointer; font-size: 15px; color: #444; display: flex; align-items: center; gap: 15px;
+            transition: background 0.2s; font-weight: 500; border-left: 4px solid transparent;
         }
-        .sidebar-menu li:hover { 
-            background: rgba(255, 107, 0, 0.1); 
-            color: #ff6b00; 
-            border-left-color: #ff6b00;
-        }
-        .sidebar-menu li i { width: 25px; text-align: center; font-size: 18px; color: var(--text-light); }
-        .sidebar-menu li:hover i { color: #ff6b00; }
+        .sidebar-menu li:hover { background: #fff5f5; color: var(--primary); border-left-color: var(--primary); }
+        .sidebar-menu li i { width: 25px; text-align: center; font-size: 18px; color: #888; }
+        .sidebar-menu li:hover i { color: var(--primary); }
 
-        .notif-item { 
-            padding: 15px; 
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
-            display: flex; gap: 10px; align-items: flex-start; 
-        }
-        .notif-icon { 
-            width: 35px; height: 35px; 
-            background: rgba(255, 107, 0, 0.2); 
-            color: #ff6b00; 
-            border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0; 
-        }
-        .notif-content h5 { font-size: 13px; font-weight: 700; margin-bottom: 3px; color: var(--white); }
-        .notif-content p { font-size: 11px; color: var(--text-light); line-height: 1.4; }
+        .notif-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; gap: 10px; align-items: flex-start; }
+        .notif-icon { width: 35px; height: 35px; background: #fff0f0; color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .notif-content h5 { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+        .notif-content p { font-size: 11px; color: #666; line-height: 1.4; }
 
         /* --- MAIN SECTIONS --- */
         .app-section { display: none; padding: 15px; animation: slideUp 0.3s ease-out; }
@@ -169,22 +134,14 @@
         .hero-banner { margin-bottom: 20px; border-radius: 12px; overflow: hidden; position: relative; }
         .alert-box { background: #222; color: white; padding: 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
         
-        .section-title { 
-            font-weight: 800; font-size: 18px; margin: 15px 0; 
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            border-left: 4px solid #ff6b00; 
-            padding-left: 10px; 
-        }
+        .section-title { font-weight: 800; font-size: 18px; margin: 15px 0; color: var(--text-dark); border-left: 4px solid var(--primary); padding-left: 10px; }
 
         /* --- GRID SYSTEM --- */
         /* Default: Mobile 1 column */
         .category-list, #matches-container {
-            display: grid; 
-            grid-template-columns: repeat(2, 1fr); 
-            gap: 10px;
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
         }
 
         /* Tablet: 2 Columns */
@@ -213,49 +170,26 @@
         }
 
         .game-card {
-            min-height: 150px; border-radius: 16px; overflow: hidden; position: relative; cursor: pointer;
-            background: #000000;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            display: flex; align-items: center; justify-content: center; padding: 15px;
-            transition: transform 0.2s;
-        }
-        .game-card:hover {
-            transform: translateY(-2px);
+            height: 120px; border-radius: 12px; overflow: hidden; position: relative; cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15); display: flex; align-items: center; padding: 0 20px;
+            transition: transform 0.2s; background-color: #000;
         }
         .game-card-bg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-size: cover; background-position: center; opacity: 0.15; z-index: 1; transition: opacity 0.3s;
+            background-size: cover; background-position: center; opacity: 0.6; z-index: 1; transition: opacity 0.3s;
         }
-        .game-card:hover .game-card-bg { opacity: 0.25; }
-        .game-card-content { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; gap: 8px; }
+        .game-card:hover .game-card-bg { opacity: 0.4; }
+        .game-card-content { position: relative; z-index: 2; display: flex; align-items: center; gap: 15px; width: 100%; }
         .game-avatar { 
-            width: 65px; height: 65px; border-radius: 50%; 
+            width: 60px; height: 60px; border-radius: 50%; 
             border: 3px solid #fff; background: #fff; 
             display: flex; align-items: center; justify-content: center;
-            font-size: 36px; flex-shrink: 0; margin-bottom: 5px;
+            font-size: 32px; flex-shrink: 0;
         }
-        .game-info { display: flex; flex-direction: column; align-items: center; width: 100%; }
-        .game-title { 
-            color: #fff; font-size: 19px; font-weight: 900; 
-            text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.8); 
-            line-height: 1.2; word-wrap: break-word; overflow-wrap: break-word;
-            margin-bottom: 5px;
-        }
-        .match-count { 
-            color: #fff; font-size: 13px; font-weight: 600; 
-            display: flex; align-items: center; gap: 6px; justify-content: center;
-        }
-        .match-count::before { 
-            content: ''; display: inline-block; width: 8px; height: 8px; 
-            background: #00ff00; border-radius: 50%; 
-            box-shadow: 0 0 8px #00ff00;
-            animation: pulse 2s infinite; 
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.1); }
-        }
+        .game-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .game-title { color: #fff; font-size: 20px; font-weight: 800; text-transform: uppercase; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
+        .match-count { color: #fff; font-size: 13px; font-weight: 500; margin-top: 4px; display: flex; align-items: center; gap: 5px; }
+        .match-count::before { content: ''; display: inline-block; width: 6px; height: 6px; background: #00ff00; border-radius: 50%; }
 
         /* --- MATCH VIEW --- */
         .how-to-join-btn {
@@ -273,31 +207,22 @@
         .tab-btn.active { background: #fff0f0; color: var(--primary); border-bottom: 2px solid var(--primary); }
 
         .match-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(0, 212, 255, 0.3);
-            border-radius: 16px;
+            background: white; border: 2px solid var(--primary); border-radius: 8px;
             padding: 15px; margin-bottom: 0; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3), 0 0 20px rgba(0, 212, 255, 0.2);
-            position: relative;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); position: relative;
             display: flex; flex-direction: column;
-            transition: all 0.3s ease;
-        }
-        .match-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 30px rgba(0, 212, 255, 0.4);
         }
         .m-header { display: flex; gap: 12px; margin-bottom: 12px; align-items: flex-start; }
-        .m-img { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 2px solid rgba(255, 107, 0, 0.3); }
+        .m-img { width: 50px; height: 50px; border-radius: 8px; object-fit: cover; }
         .m-title-box { flex: 1; }
-        .m-title { font-size: 14px; font-weight: 700; color: var(--white); line-height: 1.3; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;}
-        .m-time { font-size: 10px; color: #00d4ff; font-weight: 600; }
+        .m-title { font-size: 14px; font-weight: 700; color: #000; line-height: 1.3; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;}
+        .m-time { font-size: 10px; color: var(--primary); font-weight: 600; }
         .m-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 15px; text-align: center; }
         .m-stat-box { display: flex; flex-direction: column; }
-        .stat-label { font-size: 9px; color: var(--text-light); text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
-        .stat-value { font-size: 11px; font-weight: 800; color: var(--white); }
-        .progress-bar { height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 10px; overflow: hidden; margin-bottom: 5px; }
-        .progress-fill { height: 100%; background: var(--success-gradient); border-radius: 10px; }
+        .stat-label { font-size: 9px; color: #777; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        .stat-value { font-size: 11px; font-weight: 800; color: #000; }
+        .progress-bar { height: 8px; background: #eee; border-radius: 10px; overflow: hidden; margin-bottom: 5px; }
+        .progress-fill { height: 100%; background: var(--primary); border-radius: 10px; }
         .m-status-row { display: flex; justify-content: space-between; font-size: 10px; color: #666; margin-bottom: 15px; font-weight: 500; }
         
         .btn-join-outline {
@@ -339,89 +264,37 @@
         .result-view-title { font-size: 16px; font-weight: 700; color: #000; margin-bottom: 10px; }
         
         .result-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 15px; }
-        .result-table th { 
-            background: rgba(255, 107, 0, 0.2); 
-            text-align: left; padding: 10px; font-weight: 700; 
-            color: var(--white); 
-            border-bottom: 2px solid rgba(255, 107, 0, 0.5); 
-        }
-        .result-table td { 
-            padding: 10px; 
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1); 
-            color: var(--text-light); 
-        }
+        .result-table th { background: #f8f9fa; text-align: left; padding: 10px; font-weight: 700; color: #444; border-bottom: 2px solid #eee; }
+        .result-table td { padding: 10px; border-bottom: 1px solid #eee; color: #333; }
         .result-table tr:last-child td { border-bottom: none; }
         .winner-row { background: #f0fff4; }
 
         /* GENERAL UI ELEMENTS */
-        .card-panel { 
-            background: var(--bg-card);
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(0, 212, 255, 0.2);
-            padding: 25px; border-radius: 20px; 
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), var(--neon-glow);
-            margin-bottom: 15px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .card-panel:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(0, 212, 255, 0.6);
-        }
-        .card-panel h3 { 
-            font-size: 18px; margin-bottom: 20px; 
-            background: var(--primary-gradient);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 700; 
-            border-bottom: 2px solid rgba(255, 107, 0, 0.3); 
-            padding-bottom: 10px; 
-        }
+        .card-panel { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .card-panel h3 { font-size: 18px; margin-bottom: 20px; color: #333; font-weight: 700; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
         
         .form-group { margin-bottom: 18px; text-align: left;}
-        .form-group label { display: block; font-size: 13px; color: var(--text-light); margin-bottom: 8px; font-weight: 500; }
+        .form-group label { display: block; font-size: 13px; color: #555; margin-bottom: 8px; font-weight: 500; }
         .input-field { 
-            width: 100%; padding: 14px; 
-            border: 1px solid rgba(255, 107, 0, 0.3); 
-            border-radius: 12px; outline: none; transition: 0.3s; font-size: 14px; 
-            background: rgba(255, 255, 255, 0.05);
-            color: var(--white);
+            width: 100%; padding: 14px; border: 1px solid #ddd; border-radius: 8px; outline: none; transition: 0.3s; font-size: 14px; background: #fafafa;
         }
-        .input-field:focus { 
-            border-color: #00d4ff; 
-            background: rgba(255, 255, 255, 0.08); 
-            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2), 0 0 20px rgba(0, 212, 255, 0.3); 
-        }
+        .input-field:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(255, 85, 0, 0.1); }
 
         .primary-btn {
-            background: var(--success-gradient);
-            color: white; border: none; padding: 16px;
-            border-radius: 12px; width: 100%; font-weight: 700; cursor: pointer; font-size: 16px; margin-top: 10px;
-            box-shadow: 0 5px 20px rgba(0, 255, 136, 0.3);
-            text-transform: uppercase; letter-spacing: 1px;
-            transition: all 0.3s ease;
-        }
-        .primary-btn:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 30px rgba(0, 255, 136, 0.5);
+            background: var(--primary); color: white; border: none; padding: 16px;
+            border-radius: 8px; width: 100%; font-weight: 700; cursor: pointer; font-size: 16px; margin-top: 10px;
+            box-shadow: 0 5px 15px rgba(255, 85, 0, 0.2); text-transform: uppercase; letter-spacing: 1px;
         }
         
         /* CANCEL BUTTON STYLE */
         .btn-cancel {
-            background: rgba(255, 0, 85, 0.1); 
-            color: #ff0055; 
-            border: 1px solid rgba(255, 0, 85, 0.3);
-            padding: 16px; border-radius: 12px; width: 100%; font-weight: 700;
+            background: #f1f1f1; color: #555; border: 1px solid #ddd;
+            padding: 16px; border-radius: 8px; width: 100%; font-weight: 700;
             cursor: pointer; font-size: 16px; margin-top: 10px;
-            text-align: center; display: block;
+            text-align: center; display: block; box-shadow: none;
             text-transform: uppercase; letter-spacing: 1px;
-            transition: all 0.3s ease;
         }
-        .btn-cancel:hover { 
-            background: rgba(255, 0, 85, 0.2); 
-            border-color: #ff0055;
-            transform: scale(1.02);
-        }
+        .btn-cancel:hover { background: #e9e9e9; border-color: #ccc; }
 
         /* GOOGLE BTN STYLE */
         .google-btn {
@@ -434,24 +307,19 @@
         
         /* MODALS */
         .modal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.8);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6);
             z-index: 3000; padding: 20px; display: none; align-items: center; justify-content: center;
-            backdrop-filter: blur(10px);
-            overflow-y: auto;
+            backdrop-filter: blur(3px);
+            overflow-y: auto; /* Allow scrolling if content overflows */
         }
         .modal.active { display: flex; animation: fadeIn 0.2s; }
         .modal-box {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            border: 2px solid rgba(0, 212, 255, 0.3);
-            width: 100%; max-width: 400px; padding: 25px; border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.5), var(--neon-glow);
-            text-align: center; position: relative;
-            max-height: 90vh;
-            overflow-y: auto;
-            margin: auto;
-            -webkit-overflow-scrolling: touch;
+            background: white; width: 100%; max-width: 400px; padding: 25px; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; position: relative;
+            max-height: 90vh; /* Limit height to 90% of viewport */
+            overflow-y: auto; /* Enable vertical scrolling */
+            margin: auto; /* Center vertically when scrolling */
+            -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
         }
         
         /* Scrollbar styling for modal */
@@ -459,15 +327,15 @@
             width: 6px;
         }
         .modal-box::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
+            background: #f1f1f1;
             border-radius: 10px;
         }
         .modal-box::-webkit-scrollbar-thumb {
-            background: rgba(255, 107, 0, 0.5);
+            background: #888;
             border-radius: 10px;
         }
         .modal-box::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 107, 0, 0.8);
+            background: #555;
         }
 
         /* PAYMENT & payment detail box background FF */
@@ -559,99 +427,97 @@
         
         .notice-popup-header {
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            padding: 10px 15px;
+            padding: 25px 20px;
             text-align: center;
             color: white;
             position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
         }
         
         .notice-popup-icon {
-            font-size: 20px;
+            font-size: 48px;
+            margin-bottom: 10px;
             animation: bounce 1s infinite;
         }
         
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-3px); }
+            50% { transform: translateY(-10px); }
         }
         
         .notice-popup-title {
-            font-size: 15px;
+            font-size: 24px;
             font-weight: 800;
+            margin-bottom: 5px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
         .notice-popup-subtitle {
-            display: none;
+            font-size: 14px;
+            opacity: 0.9;
         }
         
         .notice-popup-content {
-            padding: 12px 15px;
+            padding: 25px 20px;
             overflow-y: auto;
             flex: 1;
         }
         
         .notice-item {
             background: #f8f9fa;
-            padding: 8px 10px;
-            border-radius: 8px;
-            margin-bottom: 7px;
-            border-left: 3px solid var(--primary);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary);
             position: relative;
         }
         
         .notice-item-title {
-            font-size: 13px;
+            font-size: 16px;
             font-weight: 700;
             color: #222;
-            margin-bottom: 4px;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 8px;
         }
         
         .notice-item-text {
-            font-size: 12.5px;
+            font-size: 14px;
             color: #555;
             line-height: 1.6;
-            white-space: pre-line;
         }
         
         .notice-highlight {
             background: #fff3cd;
-            padding: 6px 10px;
+            padding: 12px;
             border-radius: 8px;
             border: 1px solid #ffc107;
-            margin-bottom: 8px;
+            margin-bottom: 15px;
         }
         
         .notice-highlight-text {
-            font-size: 12px;
+            font-size: 13px;
             color: #856404;
             font-weight: 600;
             display: flex;
             align-items: flex-start;
-            gap: 6px;
+            gap: 8px;
         }
         
         .notice-popup-footer {
-            padding: 12px 15px;
+            padding: 20px;
             border-top: 1px solid #eee;
             background: #fafafa;
         }
         
         .btn-got-it {
             width: 100%;
-            padding: 12px;
+            padding: 16px;
             background: linear-gradient(135deg, var(--primary), var(--primary-dark));
             color: white;
             border: none;
             border-radius: 10px;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: 700;
             cursor: pointer;
             text-transform: uppercase;
@@ -1305,27 +1171,12 @@
                 <button onclick="navigate('home')" class="back-button">
                     <i class="fas fa-arrow-left"></i> Back to Home
                 </button>
-                <h3>Withdraw Funds</h3>
-                <p style="font-size:12px; color:#666; margin-bottom:15px;">Deposit এবং Winning Balance উভয় থেকেই withdraw করতে পারবেন।</p>
-                
-                <!-- Balance Display -->
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px;">
-                    <div style="background:#f0fff4; padding:10px; border:1px solid #c6f6d5; border-radius:8px; text-align:center;">
-                        <span style="font-size:11px; color:#2f855a;">💰 Deposit Balance</span>
-                        <h3 style="color:#2f855a; margin-top:4px;" id="withdraw-deposit-display">0 ৳</h3>
-                    </div>
-                    <div style="background:#fff8f0; padding:10px; border:1px solid #fbd38d; border-radius:8px; text-align:center;">
-                        <span style="font-size:11px; color:#c05621;">🏆 Winning Balance</span>
-                        <h3 style="color:#c05621; margin-top:4px;" id="withdraw-available-display">0 ৳</h3>
-                    </div>
+                <h3>Withdraw Winning Funds</h3>
+                <p style="font-size:12px; color:#666; margin-bottom:20px;">Note: You can only withdraw your winning balance. Deposit balance cannot be withdrawn.</p>
+                <div style="background:#f0fff4; padding:10px; border:1px solid #c6f6d5; border-radius:8px; margin-bottom:20px; text-align:center;">
+                    <span style="font-size:12px; color:#2f855a;">Available for Withdraw</span>
+                    <h2 style="color:#2f855a;" id="withdraw-available-display">0 ৳</h2>
                 </div>
-                
-                <!-- Total Available -->
-                <div style="background:#ebf8ff; padding:10px; border:1px solid #bee3f8; border-radius:8px; margin-bottom:20px; text-align:center;">
-                    <span style="font-size:12px; color:#2b6cb0;">মোট Withdraw করা যাবে</span>
-                    <h2 style="color:#2b6cb0;" id="withdraw-total-display">0 ৳</h2>
-                </div>
-                
                 <div class="form-group">
                     <label>Amount</label>
                     <input type="number" id="withdraw-amount" class="input-field" placeholder="Minimum 100">
@@ -1350,22 +1201,7 @@
                 <button onclick="navigate('home')" class="back-button">
                     <i class="fas fa-arrow-left"></i> Back to Home
                 </button>
-                
-                <h3>📊 History</h3>
-                <p style="font-size:13px; color:#666; margin-bottom:20px;">Withdraw, Deposit এবং Winner এর সম্পূর্ণ রেকর্ড</p>
-                
-                <!-- Winner History Collapsible -->
-                <details style="margin-bottom:15px; background:#f9f9f9; border:2px solid #ff9800; border-radius:12px; padding:0; overflow:hidden;">
-                    <summary style="font-weight:700; cursor:pointer; font-size:15px; padding:15px; background:linear-gradient(135deg, rgba(255,152,0,0.1), rgba(255,152,0,0.05)); display:flex; align-items:center; gap:10px;">
-                        🏆 Winner History
-                    </summary>
-                    <div id="winner-history-list" style="padding:15px;">
-                        <div style="text-align:center; padding:20px; color:#999;">Loading...</div>
-                    </div>
-                </details>
-                
-                <!-- Transaction History -->
-                <h4 style="font-size:15px; font-weight:700; margin-bottom:10px; color:#333;">💰 Transaction History</h4>
+                <h3>Transaction History</h3>
                 <div id="history-list">
                     <div style="text-align:center; padding:30px; color:#999;">Loading...</div>
                 </div>
@@ -1398,7 +1234,7 @@
                     </details>
                     <details style="margin-bottom:10px; background:#f9f9f9; border:1px solid #eee; border-radius:10px; padding:12px;">
                         <summary style="font-weight:700; cursor:pointer; font-size:14px;">💸 Withdraw কোথায় পাব?</summary>
-                        <p style="margin-top:8px; font-size:13px; color:#555;">Deposit Balance এবং Winning Balance উভয় থেকেই withdraw করা যাবে। Withdraw section থেকে request দিন।</p>
+                        <p style="margin-top:8px; font-size:13px; color:#555;">শুধুমাত্র Winning Balance withdraw করা যাবে। Withdraw section থেকে request দিন।</p>
                     </details>
                     <details style="margin-bottom:10px; background:#f9f9f9; border:1px solid #eee; border-radius:10px; padding:12px;">
                         <summary style="font-weight:700; cursor:pointer; font-size:14px;">🎮 Match Room ID কোথায় পাব?</summary>
@@ -1689,16 +1525,6 @@
                 }
                 console.log('✅ Page loaded - ready!');
             }, 500); // Small delay to ensure Firebase initialized
-            
-            // ✅ Fallback: Force hide splash after 3 seconds even if errors occur
-            setTimeout(() => {
-                const splash = document.getElementById('loadingSplash');
-                if (splash && splash.style.display !== 'none') {
-                    splash.style.opacity = '0';
-                    setTimeout(() => splash.style.display = 'none', 300);
-                    console.log('⚠️ Splash hidden by fallback timeout');
-                }
-            }, 3000);
         }
 
         // Load data only when section is opened
@@ -2351,11 +2177,6 @@
                     document.getElementById('profile-page-deposit').innerText = depositBal + " ৳";
                     document.getElementById('profile-page-winning').innerText = winningBal + " ৳";
                     document.getElementById('withdraw-available-display').innerText = winningBal + " ৳";
-                    // ✅ Update withdraw section with all balances
-                    const depositDisp = document.getElementById('withdraw-deposit-display');
-                    const totalDisp = document.getElementById('withdraw-total-display');
-                    if(depositDisp) depositDisp.innerText = depositBal + " ৳";
-                    if(totalDisp) totalDisp.innerText = (depositBal + winningBal) + " ৳";
                     
                     document.getElementById('profile-page-phone').innerText = data.phone || '--';
                     document.getElementById('profile-page-name').innerText = data.username || data.email;
@@ -3062,12 +2883,27 @@
             }
         }
 
+        // ========== NAVIGATION HISTORY STACK ==========
+        let navStack = ['home'];
+        let backPressCount = 0;
+        let backPressTimer = null;
+
         window.navigate = (sectionId) => {
             if((sectionId === 'profile' || sectionId === 'account-settings' || sectionId === 'add-money' || sectionId === 'withdraw' || sectionId === 'history' || sectionId === 'refer-system' || sectionId === 'match-results' || sectionId === 'leaderboard' || sectionId === 'match-history') && !currentUser) {
                 showAuthPage('login');
                 return;
             }
             
+            // Stack এ push করো (home reset করে, অন্যগুলো add করে)
+            if(sectionId === 'home') {
+                navStack = ['home'];
+            } else {
+                // একই section দুইবার না রাখার জন্য
+                if(navStack[navStack.length - 1] !== sectionId) {
+                    navStack.push(sectionId);
+                }
+            }
+
             // Load section data on-demand
             loadSectionData(sectionId);
             
@@ -3086,6 +2922,109 @@
             closeAllSidebars();
             window.scrollTo(0,0);
         };
+
+        // ========== BACK NAVIGATION FUNCTION ==========
+        function goBack() {
+            // Auth page খোলা থাকলে বন্ধ করো
+            const authPages = document.querySelectorAll('.auth-page.active');
+            if(authPages.length > 0) {
+                authPages.forEach(p => p.classList.remove('active'));
+                return;
+            }
+
+            // Sidebar খোলা থাকলে বন্ধ করো
+            const sidebar = document.querySelector('.sidebar.active');
+            const notifSidebar = document.querySelector('.notif-sidebar.active');
+            if(sidebar || notifSidebar) {
+                closeAllSidebars();
+                return;
+            }
+
+            // Stack এ যদি আগের page থাকে
+            if(navStack.length > 1) {
+                navStack.pop(); // current সরাও
+                const prevSection = navStack[navStack.length - 1];
+                
+                // navigate না করে directly show করো (stack duplicate এড়াতে)
+                loadSectionData(prevSection);
+                document.querySelectorAll('.app-section').forEach(el => el.classList.remove('active'));
+                const target = document.getElementById(prevSection);
+                if(target) target.classList.add('active');
+                window.scrollTo(0,0);
+                return;
+            }
+
+            // Home এ আছি — exit confirmation
+            backPressCount++;
+            if(backPressCount === 1) {
+                showExitToast();
+                backPressTimer = setTimeout(() => {
+                    backPressCount = 0;
+                }, 2000);
+            } else if(backPressCount >= 2) {
+                clearTimeout(backPressTimer);
+                // App close (PWA/WebView)
+                if(window.AndroidInterface && window.AndroidInterface.exitApp) {
+                    window.AndroidInterface.exitApp();
+                } else {
+                    window.close();
+                }
+            }
+        }
+
+        // Exit toast দেখানো
+        function showExitToast() {
+            let toast = document.getElementById('exit-toast');
+            if(!toast) {
+                toast = document.createElement('div');
+                toast.id = 'exit-toast';
+                toast.style.cssText = `
+                    position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+                    background: rgba(0,0,0,0.85); color: white; padding: 12px 24px;
+                    border-radius: 50px; font-size: 14px; font-weight: 600;
+                    z-index: 99999; display: flex; align-items: center; gap: 10px;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                    animation: fadeIn 0.2s ease;
+                `;
+                toast.innerHTML = '<img src="icons/icon-192.png" style="width:24px;height:24px;border-radius:50%;" onerror="this.style.display='none'"> Tap back once more to exit';
+                document.body.appendChild(toast);
+            }
+            toast.style.display = 'flex';
+            setTimeout(() => { toast.style.display = 'none'; backPressCount = 0; }, 2000);
+        }
+
+        // ========== HARDWARE BACK BUTTON ==========
+        window.addEventListener('popstate', (e) => {
+            e.preventDefault();
+            goBack();
+            // State পুনরায় push করো যাতে browser back না যায়
+            history.pushState(null, '', window.location.href);
+        });
+
+        // Initial state push
+        history.pushState(null, '', window.location.href);
+
+        // ========== SWIPE GESTURE (ডান থেকে বাম টান) ==========
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        document.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            const touchEndX = e.changedTouches[0].clientX;
+            const touchEndY = e.changedTouches[0].clientY;
+            const diffX = touchEndX - touchStartX;
+            const diffY = Math.abs(touchEndY - touchStartY);
+
+            // ডান দিক থেকে swipe (edge থেকে শুরু হলে) — 80px এর বেশি টানলে back
+            if(touchStartX < 30 && diffX > 80 && diffY < 100) {
+                goBack();
+            }
+        }, { passive: true });
+        // ========== END BACK NAVIGATION ==========
 
         window.copyToClipboard = (text) => {
             navigator.clipboard.writeText(text);
@@ -3309,22 +3248,15 @@ Admin verify করার পর আপনার balance যোগ হবে।
             if(amount < minWithdrawAmount) {
                 return alert(`Minimum Withdraw ${minWithdrawAmount} BDT`);
             }
-            
-            // ✅ Check total balance (deposit + winning)
-            const totalAvailable = depositBal + winningBal;
-            if(amount > totalAvailable) return alert("Insufficient Balance! আপনার মোট balance: " + totalAvailable + "৳");
+            if(amount > winningBal) return alert("Insufficient Winning Balance!");
             if(!number) return alert("Enter account number");
-
-            // ✅ Calculate how much to deduct from each balance
-            // First use winning balance, then deposit balance
-            let deductFromWinning = Math.min(amount, winningBal);
-            let deductFromDeposit = amount - deductFromWinning;
 
             const nowDate = new Date().toLocaleString('en-US', {
                 month: '2-digit', day: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit', hour12: true
             });
 
+            // push() এর ভেতরেই data দেওয়া
             push(ref(db, 'withdrawRequests'), {
                 userId: currentUser.uid,
                 userName: currentUser.displayName || currentUser.email,
@@ -3333,22 +3265,8 @@ Admin verify করার পর আপনার balance যোগ হবে।
                 phoneNumber: number,
                 status: 'pending',
                 date: nowDate,
-                timestamp: Date.now(),
-                deductFromWinning: deductFromWinning,   // ✅ Track how much from winning
-                deductFromDeposit: deductFromDeposit    // ✅ Track how much from deposit
+                timestamp: Date.now()
             }).then(() => {
-                // ✅ Deduct from balances immediately
-                const updates = {};
-                if(deductFromWinning > 0) {
-                    updates[`users/${currentUser.uid}/winning`] = winningBal - deductFromWinning;
-                }
-                if(deductFromDeposit > 0) {
-                    updates[`users/${currentUser.uid}/deposit`] = depositBal - deductFromDeposit;
-                }
-                if(Object.keys(updates).length > 0) {
-                    update(ref(db), updates);
-                }
-                
                 push(ref(db, 'transactions/' + currentUser.uid), {
                     type: 'Withdraw',
                     method: method,
@@ -3840,10 +3758,10 @@ Admin verify করার পর আপনার balance যোগ হবে।
                         noticesHTML += `
                             <div class="notice-item">
                                 <div class="notice-item-title">
-                                    <span style="font-size: 16px;">${icon}</span>
+                                    <span style="font-size: 20px;">${icon}</span>
                                     <span>${notice.title || 'নোটিশ #' + (index + 1)}</span>
                                 </div>
-                                <div class="notice-item-text">${(notice.content || '').replace(/(\d+\.|১\.|২\.|৩\.|৪\.|৫\.|৬\.|৭\.|৮\.|৯\.)/g, '<br>$1').replace(/^<br>/, '')}</div>
+                                <div class="notice-item-text">${notice.content || ''}</div>
                             </div>
                         `;
                     });
