@@ -1426,9 +1426,8 @@
 
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, push, update, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        import { getDatabase, ref, set, onValue, push, update, get, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
         // CONFIG
         const firebaseConfig = {
@@ -1475,7 +1474,6 @@
         }
 
         const auth = getAuth(app);
-        const messaging = getMessaging(app);
         const provider = new GoogleAuthProvider();
         let currentUser = null;
         
@@ -1508,16 +1506,24 @@
             const availableForWithdraw = Math.max(0, totalBalance - RESERVE_AMOUNT);
             
             // Update individual balance displays
-            document.getElementById('withdraw-deposit-display').innerText = depositBal + ' ৳';
-            document.getElementById('withdraw-winning-display').innerText = winningBal + ' ৳';
+            const depositDisplay = document.getElementById('withdraw-deposit-display');
+            const winningDisplay = document.getElementById('withdraw-winning-display');
+            const availableDisplay = document.getElementById('withdraw-available-display');
             
-            // Update total available display
-            document.getElementById('selected-balance-type').innerText = 'Total Available';
-            document.getElementById('withdraw-available-display').innerText = availableForWithdraw + ' ৳';
+            if(depositDisplay) depositDisplay.innerText = depositBal + ' ৳';
+            if(winningDisplay) winningDisplay.innerText = winningBal + ' ৳';
+            if(availableDisplay) availableDisplay.innerText = availableForWithdraw + ' ৳';
             
             // Store for validation
             window.maxWithdrawAmount = availableForWithdraw;
             window.currentTotalBalance = totalBalance;
+            
+            console.log('Withdraw Display Updated:', {
+                deposit: depositBal,
+                winning: winningBal,
+                total: totalBalance,
+                available: availableForWithdraw
+            });
         }
 
         // ==================== PERFORMANCE OPTIMIZATION ====================
@@ -2224,6 +2230,7 @@
                 showNoticePopup();
                 initBroadcastListener();
                 loadUserNotifications();
+                monitorWithdrawRequests(); // Monitor withdraw status for auto-refund
             } else {
                 currentUser = null;
                 depositBal = 0;
@@ -2278,6 +2285,14 @@
                     // Update withdraw page balances
                     document.getElementById('withdraw-deposit-display').innerText = depositBal + " ৳";
                     document.getElementById('withdraw-winning-display').innerText = winningBal + " ৳";
+                    
+                    // Update withdraw available amount (Total - 50)
+                    const RESERVE = 50;
+                    const availableWithdraw = Math.max(0, totalBal - RESERVE);
+                    const withdrawAvailableEl = document.getElementById('withdraw-available-display');
+                    if(withdrawAvailableEl) {
+                        withdrawAvailableEl.innerText = availableWithdraw + ' ৳';
+                    }
                     
                     document.getElementById('profile-page-phone').innerText = data.phone || '--';
                     document.getElementById('profile-page-name').innerText = data.username || data.email;
@@ -3218,48 +3233,62 @@ Admin verify করার পর আপনার balance যোগ হবে।
             }
         };
 
-        window.submitWithdraw = () => {
+        window.submitWithdraw = async () => {
             // Check cooldown - ignore if within 30 seconds
             if (!canMakeRequest('withdraw')) {
                 console.log('Withdraw request ignored - cooldown active');
-                return; // Silently ignore
+                return;
             }
-            
+
             const amount = parseInt(document.getElementById('withdraw-amount').value);
             const number = document.getElementById('withdraw-number').value;
             const method = document.getElementById('withdraw-method').value;
 
-            if(!amount || amount <= 0) {
-                return alert("⚠️ Please enter a valid amount");
-            }
+            if (!amount || amount <= 0) return alert("⚠️ Please enter a valid amount");
+            if (amount < minWithdrawAmount) return alert(`Minimum Withdraw ${minWithdrawAmount} BDT`);
+            if (!number) return alert("Enter account number");
 
-            if(amount < minWithdrawAmount) {
-                return alert(`Minimum Withdraw ${minWithdrawAmount} BDT`);
-            }
-            
-            // Calculate available balance (Total - 50 reserve)
-            const totalBalance = depositBal + winningBal;
             const RESERVE_AMOUNT = 50;
-            const maxWithdraw = Math.max(0, totalBalance - RESERVE_AMOUNT);
-            
-            if(amount > maxWithdraw) {
-                return alert(`❌ Insufficient Balance! You can withdraw maximum ${maxWithdraw} ৳\n(50 ৳ must remain as reserve)`);
-            }
-            
-            if(!number) return alert("Enter account number");
+            const userBalRef = ref(db, 'users/' + currentUser.uid);
 
-            // Calculate deduction from winning and deposit
-            let fromWinning = 0;
-            let fromDeposit = 0;
-            
-            if(amount <= winningBal) {
-                // Deduct everything from winning
-                fromWinning = amount;
-                fromDeposit = 0;
-            } else {
-                // Deduct all winning, rest from deposit
-                fromWinning = winningBal;
-                fromDeposit = amount - winningBal;
+            // runTransaction: Firebase থেকে LIVE balance নিয়ে atomic deduct
+            // race condition সম্পূর্ণ বন্ধ
+            let finalFromWinning = 0;
+            let finalFromDeposit = 0;
+
+            try {
+                const txResult = await runTransaction(userBalRef, (userData) => {
+                    if (userData === null) return userData;
+
+                    const liveDeposit = userData.deposit || 0;
+                    const liveWinning = userData.winning || 0;
+                    const liveTotal   = liveDeposit + liveWinning;
+                    const maxWithdraw = Math.max(0, liveTotal - RESERVE_AMOUNT);
+
+                    if (amount > maxWithdraw) {
+                        return undefined; // transaction abort
+                    }
+
+                    // Winning থেকে আগে কাটো, তারপর Deposit থেকে
+                    finalFromWinning = Math.min(amount, liveWinning);
+                    finalFromDeposit = amount - finalFromWinning;
+
+                    userData.winning = liveWinning - finalFromWinning;
+                    userData.deposit = liveDeposit - finalFromDeposit;
+
+                    return userData;
+                });
+
+                if (!txResult.committed) {
+                    const liveSnap = await get(userBalRef);
+                    const liveData = liveSnap.val() || {};
+                    const liveTotal = (liveData.deposit || 0) + (liveData.winning || 0);
+                    const maxW = Math.max(0, liveTotal - RESERVE_AMOUNT);
+                    return alert(`❌ Insufficient Balance!\nMaximum withdraw: ${maxW} ৳\n(50 ৳ reserve বাদে)`);
+                }
+
+            } catch (e) {
+                return alert('Balance deduction error: ' + e.message);
             }
 
             const nowDate = new Date().toLocaleString('en-US', {
@@ -3267,34 +3296,46 @@ Admin verify করার পর আপনার balance যোগ হবে।
                 hour: '2-digit', minute: '2-digit', hour12: true
             });
 
-            // Submit withdraw request
-            push(ref(db, 'withdrawRequests'), {
-                userId: currentUser.uid,
-                userName: currentUser.displayName || currentUser.email,
-                method: method,
-                amount: parseInt(amount),
-                phoneNumber: number,
-                fromWinning: fromWinning,
-                fromDeposit: fromDeposit,
-                status: 'pending',
-                date: nowDate,
-                timestamp: Date.now()
-            }).then(() => {
-                push(ref(db, 'transactions/' + currentUser.uid), {
-                    type: 'Withdraw',
-                    method: method,
-                    amount: amount,
-                    account: number,
-                    fromWinning: fromWinning,
-                    fromDeposit: fromDeposit,
-                    status: 'Pending',
-                    date: nowDate
+            try {
+                await push(ref(db, 'withdrawRequests'), {
+                    userId:      currentUser.uid,
+                    userName:    currentUser.displayName || currentUser.email,
+                    method:      method,
+                    amount:      amount,
+                    phoneNumber: number,
+                    fromWinning: finalFromWinning,
+                    fromDeposit: finalFromDeposit,
+                    status:      'pending',
+                    date:        nowDate,
+                    timestamp:   Date.now()
                 });
-                alert("✅ Withdraw Request Sent! Admin approve করলে পাঠিয়ে দেওয়া হবে।");
+
+                await push(ref(db, 'transactions/' + currentUser.uid), {
+                    type:        'Withdraw',
+                    method:      method,
+                    amount:      amount,
+                    account:     number,
+                    fromWinning: finalFromWinning,
+                    fromDeposit: finalFromDeposit,
+                    status:      'Pending',
+                    date:        nowDate
+                });
+
+                alert("✅ Withdraw Request Sent! টাকা আপনার একাউন্ট থেকে কেটে নেওয়া হয়েছে। Admin approve করলে পাঠিয়ে দেওয়া হবে।");
                 document.getElementById('withdraw-amount').value = "";
                 document.getElementById('withdraw-number').value = "";
                 navigate('history');
-            }).catch(e => alert('Error: ' + e.message));
+
+            } catch (e) {
+                // Request save fail হলে balance ফেরত দাও
+                runTransaction(userBalRef, (userData) => {
+                    if (userData === null) return userData;
+                    userData.deposit = (userData.deposit || 0) + finalFromDeposit;
+                    userData.winning = (userData.winning || 0) + finalFromWinning;
+                    return userData;
+                });
+                alert('Request save error: ' + e.message + '\nটাকা ফেরত দেওয়া হচ্ছে।');
+            }
         };
 
         function loadHistory() {
@@ -3366,6 +3407,135 @@ Admin verify করার পর আপনার balance যোগ হবে।
                     } else {
                     historyList.innerHTML = "<p style='text-align:center; color:#999; padding:30px;'>No transaction history yet.</p>";
                 }
+            });
+        }
+        
+        // =====================================================
+        // AUTO-REFUND SYSTEM (App বন্ধ থাকলেও কাজ করবে)
+        // =====================================================
+        // যেভাবে কাজ করে:
+        // 1) App খোলার সাথে সাথে একবার সব pending refund check করে (one-time scan)
+        // 2) তারপর real-time listener চালু রাখে যাতে app খোলা থাকলেও instant refund হয়
+        // 3) Firebase runTransaction() ব্যবহার করে race condition এড়ানো হয়েছে
+        // =====================================================
+
+        // একটা request এর refund process করার main function
+        async function processRefund(requestId, request) {
+            const requestRef = ref(db, `withdrawRequests/${requestId}`);
+            const userRef = ref(db, 'users/' + currentUser.uid);
+
+            try {
+                // Step 1: প্রথমে request টা "refund_processing" mark করো
+                // এতে একই request দুইবার process হবে না (race condition fix)
+                const claimSnap = await get(requestRef);
+                const claimData = claimSnap.val();
+
+                // যদি ইতিমধ্যে refunded বা processing এ থাকে, skip করো
+                if (!claimData || claimData.refunded || claimData.refund_processing) {
+                    return;
+                }
+
+                // Atomic claim - refund_processing flag সেট করো
+                await update(requestRef, { refund_processing: true });
+
+                // Step 2: Firebase runTransaction দিয়ে balance update (race condition safe)
+                await runTransaction(userRef, (userData) => {
+                    if (userData === null) return userData;
+                    
+                    const currentDeposit = userData.deposit || 0;
+                    const currentWinning = userData.winning || 0;
+                    
+                    userData.deposit = currentDeposit + (request.fromDeposit || 0);
+                    userData.winning = currentWinning + (request.fromWinning || 0);
+                    
+                    return userData;
+                });
+
+                // Step 3: Request কে final refunded mark করো
+                await update(requestRef, {
+                    refunded: true,
+                    refund_processing: false,
+                    refundedAt: Date.now()
+                });
+
+                // Step 4: Transaction history তে refund record রাখো
+                const nowDate = new Date().toLocaleString('en-US', {
+                    month: '2-digit', day: '2-digit', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit', hour12: true
+                });
+                push(ref(db, 'transactions/' + currentUser.uid), {
+                    type: 'Refund',
+                    method: request.method || 'N/A',
+                    amount: request.amount,
+                    account: request.phoneNumber || '',
+                    fromWinning: request.fromWinning || 0,
+                    fromDeposit: request.fromDeposit || 0,
+                    status: 'Completed',
+                    date: nowDate,
+                    note: 'Withdraw reject এর কারণে auto-refund'
+                });
+
+                console.log(`✅ Refund processed: ${request.amount}৳`);
+
+            } catch (e) {
+                // Processing flag টা reset করো যাতে পরের বার আবার try করতে পারে
+                update(requestRef, { refund_processing: false }).catch(() => {});
+                console.error('Refund error:', e);
+            }
+        }
+
+        // App খোলার সাথে সাথে একবার সব missed refund check করে (app বন্ধ ছিলে হলেও কাজ করবে)
+        async function checkMissedRefunds() {
+            if (!currentUser) return;
+            
+            try {
+                const withdrawRef = ref(db, 'withdrawRequests');
+                const snap = await get(withdrawRef);
+                const allRequests = snap.val();
+                if (!allRequests) return;
+
+                const refundPromises = [];
+                Object.entries(allRequests).forEach(([requestId, request]) => {
+                    if (request.userId === currentUser.uid &&
+                        (request.status === 'rejected' || request.status === 'declined') &&
+                        !request.refunded &&
+                        !request.refund_processing) {
+                        
+                        refundPromises.push(processRefund(requestId, request));
+                    }
+                });
+
+                if (refundPromises.length > 0) {
+                    await Promise.all(refundPromises);
+                    console.log(`✅ Missed refunds processed: ${refundPromises.length} টি`);
+                }
+            } catch (e) {
+                console.error('checkMissedRefunds error:', e);
+            }
+        }
+
+        // Real-time listener - app খোলা থাকাকালীন instant refund এর জন্য
+        function monitorWithdrawRequests() {
+            if (!currentUser) return;
+
+            // প্রথমে app খোলার সময় missed refund check করো
+            checkMissedRefunds();
+
+            // তারপর real-time listener চালু রাখো
+            const withdrawRef = ref(db, 'withdrawRequests');
+            onValue(withdrawRef, (snapshot) => {
+                const allRequests = snapshot.val();
+                if (!allRequests) return;
+
+                Object.entries(allRequests).forEach(([requestId, request]) => {
+                    if (request.userId === currentUser.uid &&
+                        (request.status === 'rejected' || request.status === 'declined') &&
+                        !request.refunded &&
+                        !request.refund_processing) {
+                        
+                        processRefund(requestId, request);
+                    }
+                });
             });
         }
         
@@ -4160,129 +4330,6 @@ Admin verify করার পর আপনার balance যোগ হবে।
             }
         }
 
-
-        // ==================== FCM PUSH NOTIFICATION SYSTEM ====================
-        
-        // VAPID Key from Firebase Console
-        const VAPID_KEY = 'BE_TiOlscKLyfVyp5Lr8nXHw2Vruj9i_Y2yqd4q1tvfEZdc0FOx1idT-h0LRPtU7GA3XMr89sp08UrPW1qEf2Wg';
-        
-        // Request Notification Permission
-        async function requestNotificationPermission() {
-            try {
-                // Check if browser supports notifications
-                if (!('Notification' in window)) {
-                    console.log('This browser does not support notifications');
-                    return null;
-                }
-
-                // Check current permission
-                if (Notification.permission === 'granted') {
-                    console.log('Notification permission already granted');
-                    return await getAndSaveFCMToken();
-                }
-
-                if (Notification.permission === 'denied') {
-                    console.log('Notification permission denied by user');
-                    return null;
-                }
-
-                // Request permission
-                const permission = await Notification.requestPermission();
-                
-                if (permission === 'granted') {
-                    console.log('Notification permission granted!');
-                    showToast('✅ Notifications enabled!', 'success');
-                    return await getAndSaveFCMToken();
-                } else {
-                    console.log('Notification permission denied');
-                    return null;
-                }
-            } catch (error) {
-                console.error('Error requesting notification permission:', error);
-                return null;
-            }
-        }
-
-        // Get FCM Token and Save to Firebase
-        async function getAndSaveFCMToken() {
-            try {
-                // Register service worker first
-                if ('serviceWorker' in navigator) {
-                    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                    console.log('Service Worker registered:', registration);
-                }
-
-                // Get FCM token
-                const token = await getToken(messaging, {
-                    vapidKey: VAPID_KEY
-                });
-
-                if (token && currentUser) {
-                    console.log('FCM Token obtained:', token);
-                    
-                    // Save token to user's profile in Firebase
-                    const userRef = ref(db, `users/${currentUser.uid}`);
-                    await update(userRef, {
-                        fcmToken: token,
-                        fcmTokenUpdatedAt: Date.now(),
-                        notificationsEnabled: true
-                    });
-                    
-                    console.log('FCM token saved to Firebase');
-                    return token;
-                } else {
-                    console.log('No FCM token available');
-                    return null;
-                }
-            } catch (error) {
-                console.error('Error getting FCM token:', error);
-                showToast('Failed to enable notifications. Please try again.', 'error');
-                return null;
-            }
-        }
-
-        // Handle foreground messages (when app is open)
-        onMessage(messaging, (payload) => {
-            console.log('Message received in foreground:', payload);
-            
-            const notificationTitle = payload.notification?.title || 'Elite Survivors League';
-            const notificationOptions = {
-                body: payload.notification?.body || 'New update',
-                icon: payload.notification?.icon || '/icon-192.png',
-                badge: '/badge-72.png',
-                vibrate: [200, 100, 200],
-                tag: 'esl-notification'
-            };
-
-            // Show notification even when app is open
-            if (Notification.permission === 'granted') {
-                new Notification(notificationTitle, notificationOptions);
-            }
-
-            // Show toast in app
-            showToast(payload.notification?.body || 'New notification', 'info');
-        });
-
-        // Auto request notification permission after login
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                currentUser = user;
-                
-                // Wait a bit after login to show permission request
-                setTimeout(async () => {
-                    if (Notification.permission === 'default') {
-                        // Show a friendly prompt first
-                        const userWants = confirm('🔔 আপনি কি Match এর updates এবং Room ID notifications পেতে চান?\n\nএটা enable করলে আপনি সরাসরি phone এ notification পাবেন।');
-                        if (userWants) {
-                            await requestNotificationPermission();
-                        }
-                    } else if (Notification.permission === 'granted') {
-                        // Permission already granted, just update token
-                        await getAndSaveFCMToken();
-                    }
-                }, 2000); // 2 seconds after login
-            }
-        });
 
         // ======= TOURNAMENT GUIDE FUNCTIONS =======
         async function loadTournamentGuides() {
