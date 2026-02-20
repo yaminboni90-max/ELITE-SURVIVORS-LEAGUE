@@ -1964,10 +1964,10 @@
         
         // Show details
         document.getElementById('withdrawApprovalDetails').innerHTML = `
-            <div style="margin-bottom:8px;"><strong>👤 User:</strong> ${userName}</div>
-            <div style="margin-bottom:8px;"><strong>💰 Amount:</strong> <span style="color:#ff9800; font-weight:800;">৳${amount}</span></div>
-            <div style="margin-bottom:8px;"><strong>📱 Method:</strong> ${method}</div>
-            <div><strong>📞 Phone:</strong> ${phone}</div>
+            <div style="margin-bottom:10px; color:#111; font-size:15px;"><strong>👤 User:</strong> <span style="color:#333;">${userName}</span></div>
+            <div style="margin-bottom:10px; color:#111; font-size:15px;"><strong>💰 Amount:</strong> <span style="color:#ff6600; font-weight:800; font-size:18px;">৳${amount}</span></div>
+            <div style="margin-bottom:10px; color:#111; font-size:15px;"><strong>📱 Method:</strong> <span style="color:#333;">${method}</span></div>
+            <div style="color:#111; font-size:15px;"><strong>📞 Phone:</strong> <span style="color:#333;">${phone}</span></div>
         `;
         
         document.getElementById('withdrawApprovalModal').style.display = 'flex';
