@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ESL Admin Panel</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
         :root {
@@ -1127,20 +1129,20 @@
     </div>
 </div>
 
-<!-- Withdraw Approval Modal - ✅ FIXED: Dark theme with white text -->
+<!-- Withdraw Approval Modal -->
 <div class="modal-overlay" id="withdrawApprovalModal" style="display:none; z-index:9999;">
-    <div class="modal-box" style="max-width:500px; padding:0; background:#161616; border:1px solid #2a2a2a; border-radius:16px;">
+    <div class="modal-box" style="max-width:500px; padding:0;">
         <div style="background:linear-gradient(135deg,#4CAF50,#45a049); padding:20px; color:#fff; border-radius:16px 16px 0 0;">
-            <h3 style="margin:0; font-size:18px; font-weight:800; color:#fff;">✅ Approve Withdraw Request</h3>
+            <h3 style="margin:0; font-size:18px; font-weight:800;">✅ Approve Withdraw Request</h3>
         </div>
         <div style="padding:24px;">
-            <div id="withdrawApprovalDetails" style="background:#0f0f0f; border:1px solid #2a2a2a; padding:16px; border-radius:12px; margin-bottom:20px;">
+            <div id="withdrawApprovalDetails" style="background:#f5f5f5; padding:16px; border-radius:12px; margin-bottom:20px;">
                 <!-- Details will be inserted here -->
             </div>
             
             <div style="display:flex; gap:12px; margin-top:24px;">
-                <button onclick="closeWithdrawApprovalModal()" style="flex:1; padding:14px; background:#2a2a2a; border:1px solid #444; border-radius:10px; color:#ccc; font-size:15px; font-weight:700; cursor:pointer; font-family:'Poppins',sans-serif;">Cancel</button>
-                <button onclick="confirmWithdrawApproval()" style="flex:1; padding:14px; background:linear-gradient(135deg,#4CAF50,#45a049); border:none; border-radius:10px; color:#fff; font-size:15px; font-weight:800; cursor:pointer; font-family:'Poppins',sans-serif;">✅ Approve & Send</button>
+                <button class="btn-cancel" onclick="closeWithdrawApprovalModal()" style="flex:1;">Cancel</button>
+                <button class="btn-login" onclick="confirmWithdrawApproval()" style="flex:1;">✅ Approve & Send</button>
             </div>
         </div>
     </div>
@@ -1148,11 +1150,6 @@
 
 <!-- Toast -->
 <div id="toast">✓ Done!</div>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 
 <script>
     const firebaseConfig = {
@@ -1165,9 +1162,15 @@
   appId: "1:344874027569:web:9a9b8055fce7787e6e6310",
   measurementId: "G-CQFW5N0C6K"
 };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    
+    let db = null;
+    try {
+        const app = firebase.apps.length ? firebase.app() : firebase.initializeApp(firebaseConfig);
+        db = firebase.database(app);
+        console.log('✅ Firebase ready');
+    } catch(e) {
+        console.error('Firebase init error:', e.message);
+    }
+
     // ===== ADMIN COOLDOWN SYSTEM (30 seconds) =====
     let lastResultSubmitTime = 0;
     let lastManualDepositTime = 0;
@@ -1192,12 +1195,8 @@
         return true;
     }
 
-    const messaging = firebase.messaging();
     let currentUser = null;
     const DEFAULT_PASS = '12345';
-    
-    // ⚠️ VAPID Key from Firebase Console
-    const VAPID_KEY = 'BE_TiOlscKLyfVyp5Lr8nXHw2Vruj9i_Y2yqd4q1tvfEZdc0FOx1idT-h0LRPtU7GA3XMr89sp08UrPW1qEf2Wg';
 
     // ========= আপাতত Distribute Prize এর জন্য current match =========
     let currentDistributeMatch = null;
@@ -1275,9 +1274,8 @@
         document.getElementById('adminEmail').textContent = '🛡 Admin';
         document.getElementById('drawerEmail').textContent = 'Admin Panel';
         loadDashboardData();
-        
-        // Initialize admin notifications after login
-        initAdminNotifications();
+        initWalletSummary();
+        loadAnalytics();
     }
 
     function doLogout() {
@@ -1399,6 +1397,7 @@
 
     // ======= DASHBOARD =======
     async function loadDashboardData() {
+        if (!db) return;
         try {
             const usersSnap = await db.ref('users').once('value');
             const allUsers = usersSnap.val() || {};
@@ -1963,24 +1962,12 @@
     function showWithdrawApprovalModal(rid, uid, amount, userName, method, phone) {
         currentWithdrawApproval = { rid, uid, amount, userName, method, phone };
         
-        // ✅ FIX: White text visible on dark background
+        // Show details
         document.getElementById('withdrawApprovalDetails').innerHTML = `
-            <div style="margin-bottom:12px;">
-                <div style="font-size:11px; color:#aaa; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">👤 User</div>
-                <div style="font-size:16px; font-weight:700; color:#fff;">${userName}</div>
-            </div>
-            <div style="margin-bottom:12px;">
-                <div style="font-size:11px; color:#aaa; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">💰 Amount</div>
-                <div style="font-size:24px; font-weight:900; color:#ffab00;">৳${amount}</div>
-            </div>
-            <div style="margin-bottom:12px;">
-                <div style="font-size:11px; color:#aaa; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">📱 Method</div>
-                <div style="font-size:15px; font-weight:600; color:#fff;">${method}</div>
-            </div>
-            <div>
-                <div style="font-size:11px; color:#aaa; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px;">📞 Phone</div>
-                <div style="font-size:15px; font-weight:600; color:#fff;">${phone}</div>
-            </div>
+            <div style="margin-bottom:8px;"><strong>👤 User:</strong> ${userName}</div>
+            <div style="margin-bottom:8px;"><strong>💰 Amount:</strong> <span style="color:#ff9800; font-weight:800;">৳${amount}</span></div>
+            <div style="margin-bottom:8px;"><strong>📱 Method:</strong> ${method}</div>
+            <div><strong>📞 Phone:</strong> ${phone}</div>
         `;
         
         document.getElementById('withdrawApprovalModal').style.display = 'flex';
@@ -2248,7 +2235,6 @@
                     <div class="card-actions" style="display:flex; gap:8px; flex-wrap:wrap;">
                         <button class="btn-sm btn-edit-sm" onclick="editTournament('${tid}')" style="flex:1; min-width:60px;">✏️ Edit</button>
                         <button class="btn-sm btn-delete" onclick="deleteTournament('${tid}')" style="flex:1; min-width:70px;">🗑 Delete</button>
-                        <button class="btn-sm" style="background:#8B0000; color:#fff; flex:1; min-width:110px;" onclick='cancelAndRefundTournament("${tid}")'>🚫 Cancel &amp; Refund</button>
                         <button class="btn-sm" style="background:#1a73e8; color:#fff; flex:1; min-width:100px;" onclick='sendMatchReminder("${tid}", ${JSON.stringify(t).replace(/'/g, "\\'")})'  title="Send match reminder to joined players">⏰ Remind</button>
                         <button class="btn-sm" style="background:#ff9800; color:#fff; flex:1; min-width:110px;" onclick='sendEmptySlotAlert("${tid}", ${JSON.stringify(t).replace(/'/g, "\\'")})'  title="Send empty slot alert to all users">📢 Empty Alert</button>
                     </div>
@@ -2257,71 +2243,59 @@
         } catch(e) { el.innerHTML = emptyState('❌','Error'); }
     }
 
-
-    // ======= CANCEL TOURNAMENT + AUTO REFUND ✅ =======
-    async function cancelAndRefundTournament(tid) {
-        // Fetch match data from Firebase
-        const snap2 = await db.ref(`tournaments/${tid}`).once('value');
-        const matchData2 = snap2.val();
-        if (!matchData2) { showToast('Tournament পাওয়া যায়নি!', 'error'); return; }
-        const matchTitle = matchData2.title || 'Match';
-        const entryFee = matchData2.entryFee || 0;
-        const participants = matchData2.participants || {};
-        const participantKeys = typeof participants === 'object' ? Object.keys(participants) : [];
-        const count = participantKeys.length;
-        const fee = entryFee || matchData2.entryFee || 0;
-
-        if (count === 0) {
-            if (!confirm(`"${matchTitle}" cancel করবেন?\nকোনো participant নেই, শুধু cancel হবে।`)) return;
-            await db.ref(`tournaments/${tid}`).update({ status: 'cancelled', cancelledAt: Date.now() });
-            showToast('✅ Match cancelled!');
-            loadTournaments(); loadDashboardData();
-            return;
-        }
-
-        if (!confirm(`"${matchTitle}" cancel করবেন?\n\n${count} জন participant কে ৳${fee} করে refund দেওয়া হবে।\nমোট refund: ৳${count * fee}`)) return;
-
-        try {
-            showToast('⏳ Refund processing...');
-            const updates = {};
-
-            for (const uid of participantKeys) {
-                const uSnap = await db.ref(`users/${uid}`).once('value');
-                const u = uSnap.val() || {};
-                updates[`users/${uid}/deposit`] = (u.deposit || 0) + fee;
-
-                // Transaction history তে refund এন্ট্রি
-                const txnId = `refund_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-                updates[`transactions/${uid}/${txnId}`] = {
-                    type: 'Refund',
-                    amount: fee,
-                    status: 'Completed',
-                    date: new Date().toLocaleDateString('bn-BD'),
-                    timestamp: Date.now(),
-                    matchTitle: matchTitle,
-                    note: 'Match cancelled - entry fee refunded'
-                };
-            }
-
-            updates[`tournaments/${tid}/status`] = 'cancelled';
-            updates[`tournaments/${tid}/cancelledAt`] = Date.now();
-            updates[`tournaments/${tid}/refundedCount`] = count;
-            updates[`tournaments/${tid}/resultDeclared`] = true; // hide from pending list
-
-            await db.ref().update(updates);
-            showToast(`✅ ${count} জনকে ৳${fee} করে refund দেওয়া হয়েছে!`);
-            loadTournaments(); loadDashboardData();
-        } catch(e) {
-            showToast('❌ Error: ' + e.message, 'error');
-            console.error(e);
-        }
-    }
-
     async function deleteTournament(tid) {
-        if (!confirm('Delete?')) return;
-        try { await db.ref(`tournaments/${tid}`).remove(); showToast('Deleted!'); loadTournaments(); loadDashboardData(); }
-        catch(e) { showToast(e.message,'error'); }
+        try {
+            const snap = await db.ref(`tournaments/${tid}`).once('value');
+            const matchData = snap.val();
+            if (!matchData) { showToast('Tournament পাওয়া যায়নি!', 'error'); return; }
+
+            const matchTitle = matchData.title || 'Match';
+            const isCompleted = matchData.status === 'completed' 
+                || matchData.resultDeclared === true 
+                || matchData.winnersDistributed === true;
+            const entryFee = matchData.entryFee || 0;
+            const participants = matchData.participants || {};
+            const participantKeys = typeof participants === 'object' ? Object.keys(participants) : [];
+            const count = participantKeys.length;
+
+            if (isCompleted) {
+                // Match complete + prize দেওয়া হয়েছে → শুধু delete, কোনো refund নেই
+                if (!confirm(`"${matchTitle}" delete করবেন?\n\n⚠️ এই match টি complete হয়েছে এবং prize দেওয়া হয়েছে।\nকোনো entry fee refund হবে না।`)) return;
+                await db.ref(`tournaments/${tid}`).remove();
+                showToast('✅ Tournament deleted!');
+            } else {
+                // Match complete হয়নি → সবাইকে entry fee refund
+                if (count === 0) {
+                    if (!confirm(`"${matchTitle}" delete করবেন?`)) return;
+                    await db.ref(`tournaments/${tid}`).remove();
+                    showToast('✅ Tournament deleted!');
+                    loadTournaments(); loadDashboardData();
+                    return;
+                }
+                if (!confirm(`"${matchTitle}" delete করবেন?\n\n${count} জন participant কে ৳${entryFee} করে refund দেওয়া হবে।\nমোট refund: ৳${count * entryFee}`)) return;
+
+                showToast('⏳ Refund processing...');
+                const updates = {};
+                for (const uid of participantKeys) {
+                    const uSnap = await db.ref(`users/${uid}`).once('value');
+                    const u = uSnap.val() || {};
+                    updates[`users/${uid}/deposit`] = (u.deposit || 0) + entryFee;
+                    const txnId = `refund_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
+                    updates[`transactions/${uid}/${txnId}`] = {
+                        type: 'Refund', amount: entryFee, status: 'Completed',
+                        date: new Date().toLocaleDateString('bn-BD'),
+                        timestamp: Date.now(), matchTitle: matchTitle,
+                        note: 'Match deleted - entry fee refunded'
+                    };
+                }
+                await db.ref().update(updates);
+                await db.ref(`tournaments/${tid}`).remove();
+                showToast(`✅ ${count} জনকে ৳${entryFee} করে refund দেওয়া হয়েছে!`);
+            }
+            loadTournaments(); loadDashboardData();
+        } catch(e) { showToast(e.message, 'error'); console.error(e); }
     }
+
 
     // ======= MANUAL DEPOSIT =======
     // Global variable to store users for search
@@ -3646,7 +3620,8 @@
     document.getElementById('loginPassword').addEventListener('keypress', e => { if(e.key==='Enter') doLogin(); });
 
     // Tournament create button override
-    document.querySelector('[onclick="openSheet(\'sheetTournament\'); loadCategoriesForSelect()"]').onclick = null;
+    const _tbtn = document.querySelector('[onclick="openSheet(\'sheetTournament\'); loadCategoriesForSelect()"]');
+    if (_tbtn) _tbtn.onclick = null;
     document.querySelector('.sec-header .btn-add') && null; // handled below
 
     // ============================================================
@@ -3670,6 +3645,7 @@
 
     // Load Analytics for Dashboard
     async function loadAnalytics() {
+        if (!db) return;
         const selectedDate = document.getElementById('analyticsDateSelector').value;
         if (!selectedDate) return;
 
@@ -3901,8 +3877,7 @@
     // Initialize on dashboard load
     document.addEventListener('DOMContentLoaded', () => {
         initDateSelectors();
-        loadAnalytics();
-        initWalletSummary();
+        // loadAnalytics and initWalletSummary need Firebase - called after login
     });
 
 </script>
@@ -3949,13 +3924,16 @@
     }
 
     // Load last broadcast on notifications section open
-    db.ref('broadcast').once('value').then(snap => {
-        const data = snap.val();
-        const preview = document.getElementById('lastBroadcastPreview');
-        if (data && data.message && preview) {
-            preview.textContent = 'শেষ message: ' + data.message.substring(0, 60) + (data.message.length > 60 ? '...' : '');
-        }
-    }).catch(() => {});
+    window.addEventListener('load', () => {
+        if (!db) return;
+        db.ref('broadcast').once('value').then(snap => {
+            const data = snap.val();
+            const preview = document.getElementById('lastBroadcastPreview');
+            if (data && data.message && preview) {
+                preview.textContent = 'শেষ message: ' + data.message.substring(0, 60) + (data.message.length > 60 ? '...' : '');
+            }
+        }).catch(() => {});
+    });
 
     // ===== AUTO REFUND =====
     async function processAutoRefund() {
@@ -4025,6 +4003,7 @@
     }
 
     function loadWalletSummaryForDate() {
+        if (!db) return;
         const dateInput = document.getElementById('ws-date');
         if (!dateInput || !dateInput.value) return;
         const key = getWalletKey(dateInput.value);
@@ -4843,120 +4822,6 @@
         } catch (error) {
             console.error('Error sending empty slot alert:', error);
             showToast('❌ Failed to send alert', 'error');
-        }
-    }
-
-    // ==================== ADMIN NOTIFICATION SYSTEM ====================
-    
-    // Request Admin Notification Permission
-    async function requestAdminNotificationPermission() {
-        try {
-            // Check if browser supports notifications
-            if (!('Notification' in window)) {
-                console.log('This browser does not support notifications');
-                showToast('⚠️ Browser does not support notifications', 'warning');
-                return null;
-            }
-
-            // Check current permission
-            if (Notification.permission === 'granted') {
-                console.log('Admin notification permission already granted');
-                return await getAndSaveAdminFCMToken();
-            }
-
-            if (Notification.permission === 'denied') {
-                console.log('Admin notification permission denied by user');
-                showToast('⚠️ Notification permission denied', 'warning');
-                return null;
-            }
-
-            // Request permission
-            const permission = await Notification.requestPermission();
-            
-            if (permission === 'granted') {
-                console.log('Admin notification permission granted!');
-                showToast('✅ Notifications enabled for admin!', 'success');
-                return await getAndSaveAdminFCMToken();
-            } else {
-                console.log('Admin notification permission denied');
-                showToast('⚠️ Notification permission denied', 'warning');
-                return null;
-            }
-        } catch (error) {
-            console.error('Error requesting admin notification permission:', error);
-            showToast('⚠️ Failed to enable notifications', 'error');
-            return null;
-        }
-    }
-
-    // Get FCM Token for Admin and Save to Firebase
-    async function getAndSaveAdminFCMToken() {
-        try {
-            // Register service worker first
-            if ('serviceWorker' in navigator) {
-                const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-                console.log('Admin Service Worker registered:', registration);
-            }
-
-            // Get FCM token using VAPID key
-            const token = await messaging.getToken({
-                vapidKey: VAPID_KEY
-            });
-
-            if (token && currentUser) {
-                console.log('Admin FCM Token obtained:', token);
-                
-                // Save token to admin's profile in Firebase
-                await db.ref(`admins/${currentUser}/fcmToken`).set(token);
-                await db.ref(`admins/${currentUser}/fcmTokenUpdatedAt`).set(Date.now());
-                await db.ref(`admins/${currentUser}/notificationsEnabled`).set(true);
-                
-                console.log('Admin FCM token saved to Firebase');
-                return token;
-            } else {
-                console.log('No Admin FCM token available');
-                return null;
-            }
-        } catch (error) {
-            console.error('Error getting Admin FCM token:', error);
-            showToast('⚠️ Failed to get notification token. Check console.', 'error');
-            return null;
-        }
-    }
-
-    // Handle foreground messages (when admin panel is open)
-    messaging.onMessage((payload) => {
-        console.log('Admin message received in foreground:', payload);
-        
-        const notificationTitle = payload.notification?.title || 'ESL Admin Alert';
-        const notificationBody = payload.notification?.body || 'New update';
-        
-        // Show toast notification in admin panel
-        showToast(`🔔 ${notificationTitle}\n${notificationBody}`, 'info');
-        
-        // Also show browser notification
-        if (Notification.permission === 'granted') {
-            new Notification(notificationTitle, {
-                body: notificationBody,
-                icon: payload.notification?.icon || 'https://cdn-icons-png.flaticon.com/512/3242/3242257.png',
-                badge: 'https://cdn-icons-png.flaticon.com/72/3242/3242257.png',
-                vibrate: [200, 100, 200],
-                tag: payload.data?.tag || 'admin-notification'
-            });
-        }
-    });
-
-    // Auto-request notification permission when admin logs in
-    // This will be called after successful login
-    async function initAdminNotifications() {
-        try {
-            if (Notification.permission !== 'granted') {
-                await requestAdminNotificationPermission();
-            } else {
-                await getAndSaveAdminFCMToken();
-            }
-        } catch (error) {
-            console.error('Error initializing admin notifications:', error);
         }
     }
 
