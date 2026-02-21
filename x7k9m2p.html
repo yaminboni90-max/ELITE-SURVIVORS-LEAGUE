@@ -2272,25 +2272,53 @@
                     loadTournaments(); loadDashboardData();
                     return;
                 }
-                if (!confirm(`"${matchTitle}" delete করবেন?\n\n${count} জন participant কে ৳${entryFee} করে refund দেওয়া হবে।\nমোট refund: ৳${count * entryFee}`)) return;
+                // প্রতিটা participant এর actual paid amount হিসাব করো
+                let totalRefundAmount = 0;
+                const refundDetails = [];
+                for (const uid of participantKeys) {
+                    const pData = participants[uid];
+                    // participant এর নিজের entryFeePaid থাকলে সেটা, না হলে players count × entryFee
+                    let paidAmount = pData?.entryFeePaid || 0;
+                    if (!paidAmount) {
+                        const playerCount = pData?.players ? Object.keys(pData.players).length : 1;
+                        paidAmount = entryFee * playerCount;
+                    }
+                    totalRefundAmount += paidAmount;
+                    refundDetails.push({ uid, paidAmount });
+                }
+
+                if (!confirm(`"${matchTitle}" delete করবেন?\n\n${count} জন participant কে তাদের entry fee refund দেওয়া হবে।\nমোট refund: ৳${totalRefundAmount}`)) return;
 
                 showToast('⏳ Refund processing...');
                 const updates = {};
-                for (const uid of participantKeys) {
+                for (const { uid, paidAmount } of refundDetails) {
                     const uSnap = await db.ref(`users/${uid}`).once('value');
                     const u = uSnap.val() || {};
-                    updates[`users/${uid}/deposit`] = (u.deposit || 0) + entryFee;
+                    // fromDeposit এবং fromWinning থাকলে সেই অনুযায়ী ফেরত দাও
+                    const pData = participants[uid];
+                    const fromDeposit = pData?.fromDeposit || paidAmount;
+                    const fromWinning = pData?.fromWinning || 0;
+                    updates[`users/${uid}/deposit`] = (u.deposit || 0) + fromDeposit;
+                    if (fromWinning > 0) {
+                        updates[`users/${uid}/winning`] = (u.winning || 0) + fromWinning;
+                    }
                     const txnId = `refund_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
                     updates[`transactions/${uid}/${txnId}`] = {
-                        type: 'Refund', amount: entryFee, status: 'Completed',
+                        type: 'Refund', amount: paidAmount, status: 'Completed',
                         date: new Date().toLocaleDateString('bn-BD'),
                         timestamp: Date.now(), matchTitle: matchTitle,
                         note: 'Match deleted - entry fee refunded'
                     };
+                    // matchRefunds এ mark করো যাতে user panel double refund না করে
+                    updates[`matchRefunds/${uid}/${tid}`] = {
+                        refunded: true, amount: paidAmount,
+                        fromDeposit: fromDeposit, fromWinning: fromWinning,
+                        matchTitle: matchTitle, refundedAt: Date.now()
+                    };
                 }
                 await db.ref().update(updates);
                 await db.ref(`tournaments/${tid}`).remove();
-                showToast(`✅ ${count} জনকে ৳${entryFee} করে refund দেওয়া হয়েছে!`);
+                showToast(`✅ ${count} জনকে মোট ৳${totalRefundAmount} refund দেওয়া হয়েছে!`);
             }
             loadTournaments(); loadDashboardData();
         } catch(e) { showToast(e.message, 'error'); console.error(e); }
@@ -3954,16 +3982,48 @@
             if (participantKeys.length === 0) { showToast('কোনো participant নেই'); if(statusEl) statusEl.textContent = '⚠️ কোনো participant নেই'; return; }
 
             const entryFee = match.entryFee || 0;
-            if (!confirm(`"${match.title}" cancel করবেন?\n${participantKeys.length} জনকে ${entryFee}৳ করে ফেরত দেওয়া হবে।`)) return;
+
+            // প্রতিটা participant এর actual paid amount হিসাব করো
+            let totalRefundAmount = 0;
+            const refundDetails = [];
+            for (const uid of participantKeys) {
+                const pData = participants[uid];
+                let paidAmount = pData?.entryFeePaid || 0;
+                if (!paidAmount) {
+                    const playerCount = pData?.players ? Object.keys(pData.players).length : 1;
+                    paidAmount = entryFee * playerCount;
+                }
+                totalRefundAmount += paidAmount;
+                refundDetails.push({ uid, paidAmount, pData });
+            }
+
+            if (!confirm(`"${match.title}" cancel করবেন?\n${participantKeys.length} জনকে তাদের entry fee ফেরত দেওয়া হবে।\nমোট refund: ৳${totalRefundAmount}`)) return;
 
             const updates = {};
             let refundCount = 0;
 
-            for (const uid of participantKeys) {
+            for (const { uid, paidAmount, pData } of refundDetails) {
                 const uSnap = await db.ref(`users/${uid}`).once('value');
                 const u = uSnap.val() || {};
-                const currentDeposit = u.deposit || 0;
-                updates[`users/${uid}/deposit`] = currentDeposit + entryFee;
+                const fromDeposit = pData?.fromDeposit || paidAmount;
+                const fromWinning = pData?.fromWinning || 0;
+                updates[`users/${uid}/deposit`] = (u.deposit || 0) + fromDeposit;
+                if (fromWinning > 0) {
+                    updates[`users/${uid}/winning`] = (u.winning || 0) + fromWinning;
+                }
+                const txnId = `refund_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
+                updates[`transactions/${uid}/${txnId}`] = {
+                    type: 'Refund', amount: paidAmount, status: 'Completed',
+                    date: new Date().toLocaleDateString('bn-BD'),
+                    timestamp: Date.now(), matchTitle: match.title,
+                    note: 'Match cancelled - entry fee refunded'
+                };
+                // matchRefunds এ mark করো যাতে user panel double refund না করে
+                updates[`matchRefunds/${uid}/${tid}`] = {
+                    refunded: true, amount: paidAmount,
+                    fromDeposit: fromDeposit, fromWinning: fromWinning,
+                    matchTitle: match.title, refundedAt: Date.now()
+                };
                 refundCount++;
             }
 
@@ -3973,9 +4033,9 @@
 
             await db.ref().update(updates);
 
-            if (statusEl) statusEl.textContent = `✅ ${refundCount} জনকে ${entryFee}৳ করে ফেরত দেওয়া হয়েছে!`;
+            if (statusEl) statusEl.textContent = `✅ ${refundCount} জনকে মোট ৳${totalRefundAmount} ফেরত দেওয়া হয়েছে!`;
             if (tidInput) tidInput.value = '';
-            showToast(`✅ ${refundCount} জনকে refund দেওয়া হয়েছে!`);
+            showToast(`✅ ${refundCount} জনকে মোট ৳${totalRefundAmount} refund দেওয়া হয়েছে!`);
             loadDashboardData();
 
         } catch(e) {
