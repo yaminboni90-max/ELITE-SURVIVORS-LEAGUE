@@ -984,12 +984,7 @@
             <div id="matches-container">
                 </div>
             
-            <div class="rules-box" id="dynamic-match-rules-box" style="display:none;">
-                <h4 class="rules-title">📋 Match Rules & Conditions</h4>
-                <div id="dynamic-rules-content" style="font-size:14px; color:#333; line-height:1.8; white-space:pre-wrap;">
-                    <!-- Match specific rules will be loaded here -->
-                </div>
-            </div>
+            
         </section>
 
         <section id="view-joined-members" class="app-section">
@@ -1625,10 +1620,10 @@
                 const splash = document.getElementById('loadingSplash');
                 if (splash) {
                     splash.style.opacity = '0';
-                    setTimeout(() => splash.style.display = 'none', 300);
+                    setTimeout(() => splash.style.display = 'none', 200);
                 }
                 console.log('✅ Page loaded - ready!');
-            }, 500); // Small delay to ensure Firebase initialized
+            }, 800); // Reduced loading time
         }
 
         // Load data only when section is opened
@@ -1808,13 +1803,12 @@
                 let users = [];
                 snap.forEach(child => {
                     const u = child.val();
-                    // ✅ Get winningBalance (not 'winning' field)
                     const totalWin = parseFloat(u.winningBalance || u.winning || 0);
-                    
-                    // ✅ Only include users with winning balance >= 10৳
-                    if (totalWin >= 10) {
+                    const name = u.username || '';
+                    // ✅ শুধু real username আছে এবং winning >= 10 হলে দেখাবে
+                    if (totalWin >= 10 && name && name.trim() !== '' && name.toLowerCase() !== 'unknown') {
                         users.push({ 
-                            name: u.username || u.email || 'Unknown', 
+                            name: name, 
                             winning: totalWin, 
                             uid: child.key 
                         });
@@ -1861,68 +1855,98 @@
             listEl.innerHTML = '<div style="text-align:center;padding:30px;color:#999;">Loading...</div>';
 
             try {
-                // Get all completed tournaments where user participated
-                const snap = await get(ref(db, 'winnerBoard'));
-                let html = '';
-                let count = 0;
+                const snap = await get(ref(db, 'tournaments'));
+                if (!snap.exists()) {
+                    listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;"><div style="font-size:40px;margin-bottom:10px;">📋</div><div>কোনো match history নেই</div></div>';
+                    return;
+                }
 
-                if (snap.exists()) {
-                    const entries = [];
-                    snap.forEach(child => entries.push({ key: child.key, ...child.val() }));
-                    entries.sort((a, b) => (b.declaredAt || 0) - (a.declaredAt || 0));
+                const all = [];
+                snap.forEach(child => all.push({ key: child.key, ...child.val() }));
 
-                    entries.forEach(entry => {
-                        // Check if current user was a winner (either as leader or team member)
-                        let myWin = null;
-                        let myPrize = 0;
-                        
-                        // Check each winner entry
-                        if (entry.winners && entry.winners.length > 0) {
-                            for (let w of entry.winners) {
-                                // Check if user is the leader
-                                if (w.leaderUid === currentUser.uid) {
-                                    myWin = w;
-                                    myPrize = w.totalPrize || 0;
-                                    break;
-                                }
-                                // Check if user is in team members
-                                if (w.teamMembers && w.teamMembers.length > 0) {
-                                    const memberMatch = w.teamMembers.find(m => m.uid === currentUser.uid);
-                                    if (memberMatch) {
-                                        myWin = w;
-                                        myPrize = memberMatch.prize || 0;
-                                        break;
-                                    }
+                // User যে matches এ join করেছে
+                const myMatches = all.filter(t => {
+                    const p = t.participants || {};
+                    return typeof p === 'object' && p[currentUser.uid];
+                });
+
+                // Newest first
+                myMatches.sort((a, b) => {
+                    return (b.dateTime ? new Date(b.dateTime).getTime() : 0) - (a.dateTime ? new Date(a.dateTime).getTime() : 0);
+                });
+
+                if (myMatches.length === 0) {
+                    listEl.innerHTML = '<div style="text-align:center;padding:40px;color:#999;"><div style="font-size:48px;margin-bottom:10px;">📋</div><div style="font-weight:600;">কোনো match history নেই</div><div style="font-size:12px;margin-top:6px;color:#aaa;">Match join করলে এখানে দেখা যাবে</div></div>';
+                    return;
+                }
+
+                // Summary card
+                const total = myMatches.length;
+                const completed = myMatches.filter(t => t.status === 'completed' || t.status === 'Finished').length;
+                const active = total - completed;
+
+                let html = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">'
+                    + '<div style="background:#fff7f0;border:1px solid #ffcc99;border-radius:10px;padding:10px;text-align:center;">'
+                    + '<div style="font-size:20px;font-weight:800;color:#ff4500;">' + total + '</div>'
+                    + '<div style="font-size:10px;color:#888;margin-top:2px;">মোট Match</div></div>'
+                    + '<div style="background:#f0fff4;border:1px solid #99e6b3;border-radius:10px;padding:10px;text-align:center;">'
+                    + '<div style="font-size:20px;font-weight:800;color:#28a745;">' + active + '</div>'
+                    + '<div style="font-size:10px;color:#888;margin-top:2px;">সক্রিয়</div></div>'
+                    + '<div style="background:#f5f5f5;border:1px solid #ddd;border-radius:10px;padding:10px;text-align:center;">'
+                    + '<div style="font-size:20px;font-weight:800;color:#6c757d;">' + completed + '</div>'
+                    + '<div style="font-size:10px;color:#888;margin-top:2px;">শেষ</div></div>'
+                    + '</div>';
+
+                // winnerBoard check
+                const wbSnap = await get(ref(db, 'winnerBoard'));
+                const wbEntries = [];
+                if (wbSnap.exists()) wbSnap.forEach(c => wbEntries.push(c.val()));
+
+                for (const t of myMatches) {
+                    const date = t.dateTime ? new Date(t.dateTime).toLocaleDateString('bn-BD', {
+                        year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                    }) : 'TBA';
+
+                    const isCompleted = t.status === 'completed' || t.status === 'Finished';
+                    const statusText = isCompleted ? 'শেষ' : 'সক্রিয়';
+                    const statusColor = isCompleted ? '#6c757d' : '#28a745';
+                    const statusBg = isCompleted ? '#f0f0f0' : '#e8f5e9';
+
+                    // Check prize
+                    let prizeHtml = '';
+                    for (const e of wbEntries) {
+                        if (e.winners) {
+                            for (const w of e.winners) {
+                                if (w.leaderUid === currentUser.uid && (e.matchTitle === t.title || e.matchKey === t.key)) {
+                                    prizeHtml = '<div style="font-size:13px;font-weight:800;color:#ff4500;margin-top:4px;">🏆 +' + (w.totalPrize||0) + '৳ জিতেছেন!</div>';
                                 }
                             }
                         }
-                        
-                        // Only show if user participated
-                        if (myWin) {
-                            const date = entry.declaredAt ? new Date(entry.declaredAt).toLocaleDateString('bn-BD') : 'N/A';
-                            const status = myPrize > 0 ? '🏆 Winner' : '📋 Participated';
-                            const color = myPrize > 0 ? '#28a745' : '#6c757d';
+                    }
 
-                            html += `<div style="padding:14px; background:#f9f9f9; border:1px solid #eee; border-radius:12px; margin-bottom:10px;">
-                                <div style="display:flex; justify-content:space-between; align-items:start;">
-                                    <div>
-                                        <div style="font-weight:700; font-size:14px; color:#333;">${entry.matchTitle || 'Match'}</div>
-                                        <div style="font-size:12px; color:#999; margin-top:2px;">${date}</div>
-                                    </div>
-                                    <div style="text-align:right;">
-                                        <div style="font-size:12px; color:${color}; font-weight:700;">${status}</div>
-                                        ${myPrize > 0 ? `<div style="font-size:14px; font-weight:800; color:#ff4500;">+${myPrize}৳</div>` : ''}
-                                    </div>
-                                </div>
-                            </div>`;
-                            count++;
-                        }
-                    });
+                    html += '<div style="padding:14px;background:#fff;border:1px solid #eee;border-radius:12px;margin-bottom:10px;box-shadow:0 2px 6px rgba(0,0,0,0.04);">'
+                        + '<div style="display:flex;justify-content:space-between;align-items:start;gap:10px;">'
+                        + '<div style="flex:1;">'
+                        + '<div style="font-weight:700;font-size:14px;color:#333;">' + (t.title || 'Match') + '</div>'
+                        + '<div style="font-size:11px;color:#aaa;margin-top:3px;">' + date + '</div>'
+                        + '<div style="font-size:12px;color:#666;margin-top:5px;display:flex;gap:10px;">'
+                        + '<span>🎮 ' + (t.gameType || 'Solo') + '</span>'
+                        + '<span>🗺️ ' + (t.map || 'TBA') + '</span>'
+                        + '<span>💰 ৳' + (t.entryFee || 0) + '</span>'
+                        + '</div>'
+                        + prizeHtml
+                        + '</div>'
+                        + '<div style="text-align:right;flex-shrink:0;">'
+                        + '<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;background:' + statusBg + ';color:' + statusColor + ';">' + statusText + '</span>'
+                        + '</div>'
+                        + '</div>'
+                        + '</div>';
                 }
 
-                listEl.innerHTML = count > 0 ? html : '<div style="text-align:center;padding:30px;color:#999;">কোনো match history নেই</div>';
+                listEl.innerHTML = html;
+
             } catch(e) {
-                listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#f00;">Error loading history</div>';
+                listEl.innerHTML = '<div style="text-align:center;padding:20px;color:#f00;">Error: ' + e.message + '</div>';
                 console.error(e);
             }
         };
@@ -2348,23 +2372,6 @@
             
             if(tab === 'play') {
                 dataToRender = rawMatches.filter(m => m.category === currentActiveCategory && m.status !== 'completed' && m.status !== 'Finished');
-            } else if(tab === 'rules') {
-                // Rules tab - matches না দেখাও, শুধু নিচে rules box দেখাও
-                container.style.display = 'none';
-                
-                // Rules load করো
-                const categoryMatches = rawMatches.filter(m => m.category === currentActiveCategory && m.status !== 'completed' && m.status !== 'Finished');
-                const rulesBox = document.getElementById('dynamic-match-rules-box');
-                const rulesContent = document.getElementById('dynamic-rules-content');
-                
-                if (categoryMatches.length > 0 && categoryMatches[0].matchRules) {
-                    rulesContent.textContent = categoryMatches[0].matchRules;
-                    rulesBox.style.display = 'block';
-                } else {
-                    rulesContent.textContent = 'No rules specified for this category.';
-                    rulesBox.style.display = 'block';
-                }
-                return;
             }
             
             container.style.display = 'block';
@@ -2511,6 +2518,7 @@
 
                     <div class="m-btn-row" style="margin-top:15px;">
                         <button class="btn-prize" onclick='openPrizeListModal(${JSON.stringify(m.prizes || {})}, "${m.title}", ${m.totalPrize || 0})'>Prize List</button>
+                        <button class="btn-prize" style="background:#1a73e8; font-size:13px; padding:8px 18px;" onclick='openRulesModal("${m.dbKey}")'>Rules</button>
                         <button class="btn-room" onclick='checkRoomDetails("${m.dbKey}", "${m.dateTime || ""}") '>ROOM ID</button>
                         ${(m.participants && Object.keys(m.participants).length >= parseInt(m.slots || 999)) ? '<span style="background:#dc3545;color:#fff;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;margin-left:5px;">🔒 FULL</span>' : ''}
                     </div>
@@ -2524,18 +2532,7 @@
 
             if(tab === 'play') startTimers();
             
-            // Load and display match rules for both Play and Rules tab
-            const rulesBox = document.getElementById('dynamic-match-rules-box');
-            const rulesContent = document.getElementById('dynamic-rules-content');
-            
-            const categoryMatches = dataToRender.length > 0 ? dataToRender : rawMatches.filter(m => m.category === currentActiveCategory);
-            
-            if (categoryMatches.length > 0 && categoryMatches[0].matchRules) {
-                rulesContent.textContent = categoryMatches[0].matchRules;
-                rulesBox.style.display = 'block';
-            } else {
-                rulesBox.style.display = 'none';
-            }
+
         };
 
         // ROOM ID CHECK WITH COUNTDOWN
@@ -2787,8 +2784,12 @@
                 return;
             }
 
-            currentJoinMatchId = matchDbKey; 
-            currentJoinFee = fee;
+            currentJoinMatchId = matchDbKey;
+            // ✅ Calculate total fee based on team size
+            let teamCount = 1;
+            if(type.toLowerCase().includes('duo')) teamCount = 2;
+            if(type.toLowerCase().includes('squad')) teamCount = 4;
+            currentJoinFee = fee * teamCount;
             currentJoinMatchTitle = title;
 
             document.getElementById('join-modal-title').innerText = title;
@@ -2827,6 +2828,42 @@
         };
 
         // PRIZE LIST MODAL FUNCTIONS
+                // ===== RULES MODAL =====
+        window.openRulesModal = async (matchKey) => {
+            const existingModal = document.getElementById('rulesModal');
+            if (existingModal) existingModal.remove();
+
+            // Firebase থেকে live rules fetch
+            try {
+                const snap = await get(ref(db, 'tournaments/' + matchKey));
+                const matchData = snap.exists() ? snap.val() : {};
+                const rules = matchData.matchRules || 'এই ম্যাচের জন্য কোনো Rules নির্ধারণ করা হয়নি।';
+                const matchTitle = matchData.title || 'Match Rules';
+
+                const modal = document.createElement('div');
+                modal.id = 'rulesModal';
+                modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+
+                modal.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:420px;max-height:82vh;overflow-y:auto;font-family:Poppins,sans-serif;box-shadow:0 20px 60px rgba(0,0,0,0.4);">'
+                    + '<div style="background:#FF5500;padding:18px 20px;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:space-between;">'
+                    + '<div style="font-size:15px;font-weight:800;color:#fff;">📋 Match Rules & Conditions</div>'
+                    + '<button id="closeRulesModal" style="background:rgba(255,255,255,0.2);border:none;border-radius:8px;color:#fff;font-size:18px;width:34px;height:34px;cursor:pointer;line-height:1;">✕</button>'
+                    + '</div>'
+                    + '<div style="padding:20px;">'
+                    + '<div style="font-size:14px;font-weight:700;color:#FF5500;margin-bottom:12px;">' + matchTitle + '</div>'
+                    + '<div style="font-size:14px;color:#333;line-height:2;white-space:pre-wrap;">' + rules + '</div>'
+                    + '</div>'
+                    + '</div>';
+
+                document.body.appendChild(modal);
+                document.getElementById('closeRulesModal').addEventListener('click', () => modal.remove());
+                modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+            } catch(e) {
+                alert('Rules লোড করতে সমস্যা হয়েছে: ' + e.message);
+            }
+        };
+
         window.openPrizeListModal = (prizes, matchTitle, totalPrize) => {
             const modal = document.getElementById('prize-list-modal');
             const content = document.getElementById('prize-list-content');
@@ -2968,19 +3005,36 @@
             let playersData = [];
 
             for(let i=0; i<nameInputs.length; i++) {
-                if(!nameInputs[i].value.trim() || !uidInputs[i].value.trim()) {
+                const name = nameInputs[i].value.trim();
+                const uid = uidInputs[i].value.trim();
+                
+                if(!name || !uid) {
                     valid = false;
                     break;
                 }
+                
+                // ✅ Name validation: min 3 chars, no special chars only
+                if(name.length < 3) {
+                    return alert(`Player ${i+1}: In-Game Name কমপক্ষে ৩ অক্ষর হতে হবে।`);
+                }
+                if(/^[^a-zA-Z0-9ঀ-৿_. ]+$/.test(name)) {
+                    return alert(`Player ${i+1}: সঠিক In-Game Name দিন।`);
+                }
+                
+                // ✅ UID validation: must be numeric, 6-12 digits
+                if(!/^\d{6,12}$/.test(uid)) {
+                    return alert(`Player ${i+1}: Free Fire UID অবশ্যই ৬-১২ সংখ্যার হতে হবে (শুধু নম্বর)।`);
+                }
+                
                 playersData.push({
-                    name: nameInputs[i].value.trim(),
-                    playerName: nameInputs[i].value.trim(),
-                    gameId: uidInputs[i].value.trim(),
-                    uid: uidInputs[i].value.trim()
+                    name: name,
+                    playerName: name,
+                    gameId: uid,
+                    uid: uid
                 });
             }
 
-            if(!valid) return alert("Please fill Name and UID for all players.");
+            if(!valid) return alert("সকল player এর Name এবং UID দিন।");
             
             let newDeposit = depositBal;
             let newWinning = winningBal;
