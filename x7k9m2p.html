@@ -1403,10 +1403,10 @@
             const usersSnap = await db.ref('users').once('value');
             const allUsers = usersSnap.val() || {};
             
-            // ✅ Count only registered users (those with email)
+            // ✅ Count only active (non-banned) registered users
             const registeredUsersCount = Object.keys(allUsers).filter(uid => {
                 const u = allUsers[uid];
-                return u.email && u.email.trim() !== '';
+                return u.email && u.email.trim() !== '' && !u.banned;
             }).length;
             
             document.getElementById('totalUsers').textContent = registeredUsersCount;
@@ -1580,11 +1580,11 @@
             const snap = await db.ref('users').once('value');
             const users = snap.val() || {};
             
-            // ✅ Filter: Only show users who have email (properly registered users)
+            // ✅ Filter: Only show non-banned users with email
             const registeredUsers = Object.keys(users).filter(uid => {
                 const u = users[uid];
-                // Must have email to be a registered user
-                return u.email && u.email.trim() !== '';
+                // Must have email AND not be banned
+                return u.email && u.email.trim() !== '' && !u.banned;
             });
             
             if (!registeredUsers.length) { el.innerHTML = emptyState('👥','No registered users found'); return; }
@@ -2318,9 +2318,72 @@
     }
 
     async function deleteTournament(tid) {
-        if (!confirm('Delete?')) return;
-        try { await db.ref(`tournaments/${tid}`).remove(); showToast('Deleted!'); loadTournaments(); loadDashboardData(); }
-        catch(e) { showToast(e.message,'error'); }
+        // ✅ Fetch tournament first to check if refund needed
+        const snap = await db.ref(`tournaments/${tid}`).once('value');
+        const match = snap.val();
+        if (!match) return;
+
+        const resultDeclared = match.resultDeclared || false;
+        const participants = match.participants || {};
+        const participantKeys = typeof participants === 'object' ? Object.keys(participants) : [];
+        const entryFee = match.entryFee || 0;
+        const gameType = (match.gameType || 'solo').toLowerCase();
+        
+        // Calculate fee per participant based on game type
+        let feeMultiplier = 1;
+        if(gameType.includes('duo')) feeMultiplier = 2;
+        if(gameType.includes('squad')) feeMultiplier = 4;
+        const refundPerPlayer = entryFee * feeMultiplier;
+
+        const count = participantKeys.length;
+
+        // Confirm message
+        let confirmMsg = `"${match.title || 'Match'}" delete করবেন?`;
+        if (!resultDeclared && count > 0) {
+            confirmMsg += `\n\n${count} জন participant কে ৳${refundPerPlayer} করে refund দেওয়া হবে।\nমোট refund: ৳${count * refundPerPlayer}`;
+        } else if (resultDeclared) {
+            confirmMsg += '\n\nWinner prize দেওয়া হয়েছে — refund হবে না।';
+        } else {
+            confirmMsg += '\n\nকোনো participant নেই।';
+        }
+
+        if (!confirm(confirmMsg)) return;
+
+        try {
+            const updates = {};
+            
+            // ✅ Refund if not already declared winner
+            if (!resultDeclared && count > 0) {
+                for (const uid of participantKeys) {
+                    const uSnap = await db.ref(`users/${uid}`).once('value');
+                    const u = uSnap.val() || {};
+                    updates[`users/${uid}/deposit`] = (u.deposit || 0) + refundPerPlayer;
+                    
+                    // Transaction history
+                    const txnId = `refund_${Date.now()}_${Math.random().toString(36).substr(2,6)}`;
+                    updates[`transactions/${uid}/${txnId}`] = {
+                        type: 'Refund',
+                        amount: refundPerPlayer,
+                        status: 'Completed',
+                        date: new Date().toLocaleDateString('bn-BD'),
+                        timestamp: Date.now(),
+                        matchTitle: match.title || 'Match',
+                        note: 'Match deleted - entry fee refunded'
+                    };
+                }
+                if (Object.keys(updates).length > 0) {
+                    await db.ref().update(updates);
+                }
+                showToast(`✅ ${count} জনকে ৳${refundPerPlayer} করে refund দেওয়া হয়েছে!`);
+            }
+            
+            // Delete tournament
+            await db.ref(`tournaments/${tid}`).remove();
+            showToast('Match deleted!');
+            loadTournaments();
+            loadDashboardData();
+        }
+        catch(e) { showToast(e.message, 'error'); }
     }
 
     // ======= MANUAL DEPOSIT =======
@@ -2838,7 +2901,45 @@
             document.getElementById('welcomeMessage').value = s.welcomeMessage||'';
         } catch(e) {}
     }
-    async function saveSettings() {
+            // ✅ Convert web URLs to app deep links
+        function convertToAppLink(type, url) {
+            if (!url || url.trim() === '') return '';
+            url = url.trim();
+            
+            if (type === 'telegram') {
+                // https://t.me/username → tg://resolve?domain=username
+                // https://t.me/+inviteHash → tg://join?invite=hash
+                const match = url.match(/t\.me\/\+(.+)/);
+                if (match) return 'tg://join?invite=' + match[1];
+                const match2 = url.match(/t\.me\/(.+)/);
+                if (match2) return 'tg://resolve?domain=' + match2[1];
+                return url;
+            }
+            if (type === 'whatsapp') {
+                // https://wa.me/8801XXXXXXX → whatsapp://send?phone=8801XXXXXXX
+                const match = url.match(/wa\.me\/([0-9]+)/);
+                if (match) return 'whatsapp://send?phone=' + match[1];
+                // https://chat.whatsapp.com/XXXXX → direct group link (keep as is for browser)
+                if (url.includes('chat.whatsapp.com')) return url;
+                return url;
+            }
+            if (type === 'facebook') {
+                // https://facebook.com/pagename → fb://page/pagename
+                const match = url.match(/facebook\.com\/([^/?]+)/);
+                if (match) return 'fb://page/' + match[1];
+                return url;
+            }
+            if (type === 'youtube') {
+                // https://youtube.com/@channel → vnd.youtube://www.youtube.com/@channel
+                if (url.includes('youtube.com')) {
+                    return url.replace('https://', 'vnd.youtube://');
+                }
+                return url;
+            }
+            return url;
+        }
+
+        async function saveSettings() {
         const data = {
             userPanelName: document.getElementById('userPanelName').value,
             adminPanelName: document.getElementById('adminPanelName').value,
@@ -2867,10 +2968,10 @@
             daily_deposit_limit: parseInt(document.getElementById('dailyDepositLimit').value)||0,
             min_withdraw: parseInt(document.getElementById('minWithdraw').value)||0,
             app_name: document.getElementById('userPanelName').value,
-            support_facebook: document.getElementById('supportFacebook').value,
-            support_whatsapp: document.getElementById('supportWhatsapp').value,
-            support_telegram: document.getElementById('supportTelegram').value,
-            support_youtube: document.getElementById('supportYoutube').value,
+            support_facebook: convertToAppLink('facebook', document.getElementById('supportFacebook').value),
+            support_whatsapp: convertToAppLink('whatsapp', document.getElementById('supportWhatsapp').value),
+            support_telegram: convertToAppLink('telegram', document.getElementById('supportTelegram').value),
+            support_youtube: convertToAppLink('youtube', document.getElementById('supportYoutube').value),
             support_gmail: document.getElementById('supportGmail').value,
             custom_link_1: document.getElementById('customLink1').value,
             custom_link_2: document.getElementById('customLink2').value,
@@ -4446,13 +4547,10 @@
         }
         
         try {
-            await db.ref(`users/${userId}`).update({
-                banned: true,
-                banReason: reason,
-                bannedAt: Date.now()
-            });
+            // ✅ Ban = পুরোপুরি delete করো Firebase থেকে
+            await db.ref(`users/${userId}`).remove();
             
-            showToast(`✅ ${userName} has been banned`, 'success');
+            showToast(`✅ ${userName} banned & deleted!`, 'success');
             document.querySelector('div[style*=fixed]').remove();
             loadUsers();
             
