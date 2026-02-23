@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -984,7 +984,12 @@
             <div id="matches-container">
                 </div>
             
-            <!-- Rules box removed - now shown via Rules button popup in each match card -->
+            <div class="rules-box" id="dynamic-match-rules-box" style="display:none;">
+                <h4 class="rules-title">📋 Match Rules & Conditions</h4>
+                <div id="dynamic-rules-content" style="font-size:14px; color:#333; line-height:1.8; white-space:pre-wrap;">
+                    <!-- Match specific rules will be loaded here -->
+                </div>
+            </div>
         </section>
 
         <section id="view-joined-members" class="app-section">
@@ -1419,29 +1424,9 @@
         </div>
     </div>
 
-    <!-- ======= RULES MODAL ======= -->
-    <div id="rules-modal" onclick="handleRulesOverlayClick(event)" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:9999; align-items:center; justify-content:center; padding:24px;">
-        <div style="background:#fff; border-radius:16px; width:100%; max-width:360px; max-height:75vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,0.25);">
-            <!-- Header -->
-            <div style="display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:linear-gradient(135deg,#FF4500,#ff6a00); border-radius:16px 16px 0 0;">
-                <button onclick="closeRulesModal()" style="background:rgba(255,255,255,0.2); border:none; color:#fff; width:32px; height:32px; border-radius:8px; font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center;">←</button>
-                <span style="font-size:14px; font-weight:700; color:#fff;">📋 Match Rules & Conditions</span>
-                <div style="width:32px;"></div>
-            </div>
-            <!-- Body - scrollable -->
-            <div id="rules-modal-content" style="flex:1; overflow-y:auto; padding:16px; font-size:13px; color:#333; line-height:1.8; white-space:pre-wrap; -webkit-overflow-scrolling:touch;">
-                <!-- Rules will be inserted here -->
-            </div>
-            <!-- Footer -->
-            <div style="padding:12px 16px; border-top:1px solid #eee;">
-                <button onclick="closeRulesModal()" style="width:100%; padding:12px; background:linear-gradient(135deg,#FF4500,#ff6a00); border:none; border-radius:10px; color:#fff; font-size:14px; font-weight:700; cursor:pointer;">✅ Got It</button>
-            </div>
-        </div>
-    </div>
-
     <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, push, update, get, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+        import { getDatabase, ref, set, onValue, push, update, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
         import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
         // CONFIG
@@ -2087,22 +2072,6 @@
                 if(document.getElementById('matches-view').classList.contains('active')) {
                     switchMatchTab(document.querySelector('.tab-btn.active').id.replace('tab-',''));
                 }
-                
-                // Check for cancelled/deleted matches and refund
-                checkMatchRefunds(data);
-                
-                // localStorage এ completed matches mark করো (যাতে delete হলে refund না যায়)
-                if (data && currentUser) {
-                    const joinedMatches = JSON.parse(localStorage.getItem('userJoinedMatches') || '{}');
-                    let updated = false;
-                    Object.entries(data).forEach(([key, val]) => {
-                        if (joinedMatches[key] && (val.status === 'completed' || val.status === 'Finished')) {
-                            joinedMatches[key].matchCompleted = true;
-                            updated = true;
-                        }
-                    });
-                    if (updated) localStorage.setItem('userJoinedMatches', JSON.stringify(joinedMatches));
-                }
             });
         }
 
@@ -2382,6 +2351,19 @@
             } else if(tab === 'rules') {
                 // Rules tab - matches না দেখাও, শুধু নিচে rules box দেখাও
                 container.style.display = 'none';
+                
+                // Rules load করো
+                const categoryMatches = rawMatches.filter(m => m.category === currentActiveCategory && m.status !== 'completed' && m.status !== 'Finished');
+                const rulesBox = document.getElementById('dynamic-match-rules-box');
+                const rulesContent = document.getElementById('dynamic-rules-content');
+                
+                if (categoryMatches.length > 0 && categoryMatches[0].matchRules) {
+                    rulesContent.textContent = categoryMatches[0].matchRules;
+                    rulesBox.style.display = 'block';
+                } else {
+                    rulesContent.textContent = 'No rules specified for this category.';
+                    rulesBox.style.display = 'block';
+                }
                 return;
             }
             
@@ -2529,14 +2511,7 @@
 
                     <div class="m-btn-row" style="margin-top:15px;">
                         <button class="btn-prize" onclick='openPrizeListModal(${JSON.stringify(m.prizes || {})}, "${m.title}", ${m.totalPrize || 0})'>Prize List</button>
-                        <button class="btn-rules" onclick='openRulesModal(${JSON.stringify(m.matchRules || m.rules || "")})' style="background:linear-gradient(45deg,#333,#555);color:#fff;border:none;padding:6px 15px;border-radius:4px;font-size:10px;font-weight:600;cursor:pointer;">📋 Rules</button>
-                        <button class="btn-room" onclick='checkRoomDetails(${JSON.stringify({
-                            roomId: m.roomId || "",
-                            password: m.roomPassword || "",
-                            matchKey: m.dbKey || "",
-                            dateTime: m.dateTime || "",
-                            participants: m.participants || {}
-                        })})'>ROOM ID</button>
+                        <button class="btn-room" onclick='checkRoomDetails("${m.dbKey}", "${m.dateTime || ""}") '>ROOM ID</button>
                         ${(m.participants && Object.keys(m.participants).length >= parseInt(m.slots || 999)) ? '<span style="background:#dc3545;color:#fff;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:700;margin-left:5px;">🔒 FULL</span>' : ''}
                     </div>
 
@@ -2548,52 +2523,74 @@
             });
 
             if(tab === 'play') startTimers();
+            
+            // Load and display match rules for both Play and Rules tab
+            const rulesBox = document.getElementById('dynamic-match-rules-box');
+            const rulesContent = document.getElementById('dynamic-rules-content');
+            
+            const categoryMatches = dataToRender.length > 0 ? dataToRender : rawMatches.filter(m => m.category === currentActiveCategory);
+            
+            if (categoryMatches.length > 0 && categoryMatches[0].matchRules) {
+                rulesContent.textContent = categoryMatches[0].matchRules;
+                rulesBox.style.display = 'block';
+            } else {
+                rulesBox.style.display = 'none';
+            }
         };
 
         // ROOM ID CHECK WITH COUNTDOWN
-        window.checkRoomDetails = (matchData) => {
-            const { roomId, password, matchKey, dateTime, participants } = matchData;
-            
+        window.checkRoomDetails = async (matchKey, dateTime) => {
             // Check if user is logged in
             if (!currentUser) {
                 return alert("⚠️ দুঃখিত!\n\nআপনাকে প্রথমে লগইন করতে হবে।");
             }
-            
-            // Check if user has joined this match
-            const userHasJoined = participants && participants[currentUser.uid];
-            
-            if (!userHasJoined) {
-                return alert("❌ দুঃখিত!\n\nআপনি এই ম্যাচে জয়েন করেননি।\n\nরুম আইডি এবং পাসওয়ার্ড শুধুমাত্র জয়েন করা প্লেয়ারদের জন্য।");
+
+            if (!matchKey) {
+                return alert("❌ Match ID পাওয়া যায়নি।");
             }
-            
-            // Check if room ID exists
-            if (!roomId || roomId === 'undefined' || roomId.length < 3) {
-                // Calculate countdown
-                let countdownText = "";
-                if (dateTime) {
-                    const matchTime = new Date(dateTime).getTime();
-                    const now = Date.now();
-                    const diff = matchTime - now;
-                    
-                    if (diff > 0) {
-                        const hours = Math.floor(diff / (1000 * 60 * 60));
-                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                        
-                        if (hours > 0) {
-                            countdownText = `\n\n⏱️ ম্যাচ শুরু হতে বাকি: ${hours} ঘন্টা ${minutes} মিনিট`;
-                        } else if (minutes > 0) {
-                            countdownText = `\n\n⏱️ ম্যাচ শুরু হতে বাকি: ${minutes} মিনিট`;
-                        } else {
-                            countdownText = `\n\n⏱️ ম্যাচ শীঘ্রই শুরু হবে!`;
+
+            try {
+                // ✅ LIVE fetch from Firebase - always get latest room ID
+                const matchSnap = await get(ref(db, 'tournaments/' + matchKey));
+                if (!matchSnap.exists()) {
+                    return alert("❌ Match পাওয়া যায়নি।");
+                }
+                const matchData = matchSnap.val();
+                const roomId = matchData.roomId || "";
+                const password = matchData.roomPassword || "";
+                const participants = matchData.participants || {};
+
+                // ✅ Check if user has joined
+                const userHasJoined = participants[currentUser.uid];
+                if (!userHasJoined) {
+                    return alert("❌ দুঃখিত!\n\nআপনি এই ম্যাচে জয়েন করেননি।\n\nরুম আইডি এবং পাসওয়ার্ড শুধুমাত্র জয়েন করা প্লেয়ারদের জন্য।");
+                }
+
+                // ✅ Check if room ID exists (live data)
+                if (!roomId || roomId.trim() === '' || roomId === 'undefined' || roomId.length < 3) {
+                    let countdownText = "";
+                    if (dateTime) {
+                        const matchTime = new Date(dateTime).getTime();
+                        const now = Date.now();
+                        const diff = matchTime - now;
+                        if (diff > 0) {
+                            const hours = Math.floor(diff / (1000 * 60 * 60));
+                            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                            if (hours > 0) countdownText = `\n\n⏱️ ম্যাচ শুরু হতে বাকি: ${hours} ঘন্টা ${minutes} মিনিট`;
+                            else if (minutes > 0) countdownText = `\n\n⏱️ ম্যাচ শুরু হতে বাকি: ${minutes} মিনিট`;
+                            else countdownText = `\n\n⏱️ ম্যাচ শীঘ্রই শুরু হবে!`;
                         }
                     }
+                    return alert(`⏰ দুঃখিত!\n\nএই ম্যাচের রুম আইডি এবং পাসওয়ার্ড এখনো আপডেট করা হয়নি।\n\nম্যাচ শুরু হওয়ার ১০ মিনিট আগে পেয়ে যাবেন।${countdownText}`);
                 }
-                
-                return alert(`⏰ দুঃখিত!\n\nএই ম্যাচের রুম আইডি এবং পাসওয়ার্ড এখনো আপডেট করা হয়নি।\n\nম্যাচ শুরু হওয়ার ১০ মিনিট আগে পেয়ে যাবেন।${countdownText}`);
+
+                // ✅ Show room details
+                alert(`✅ রুম আইডি এবং পাসওয়ার্ড\n\n🔑 ROOM ID: ${roomId}\n🔒 PASSWORD: ${password}\n\n📌 সময়মতো জয়েন করুন এবং সফল হন!`);
+
+            } catch(e) {
+                console.error('Room details error:', e);
+                alert("❌ Error: " + e.message);
             }
-            
-            // Show room details
-            alert(`✅ রুম আইডি এবং পাসওয়ার্ড\n\n🔑 ROOM ID: ${roomId}\n🔒 PASSWORD: ${password}\n\n📌 সময়মতো জয়েন করুন এবং সফল হন!`);
         };
 
         function startTimers() {
@@ -2844,22 +2841,6 @@
             document.getElementById('prize-list-modal').classList.remove('active');
         };
 
-        // ======= RULES MODAL FUNCTIONS =======
-        window.openRulesModal = (rules) => {
-            const modal = document.getElementById('rules-modal');
-            const content = document.getElementById('rules-modal-content');
-            content.textContent = rules && rules.trim() ? rules : 'এই match এর কোনো rules নির্ধারণ করা হয়নি।';
-            modal.style.display = 'flex';
-        };
-
-        window.closeRulesModal = () => {
-            document.getElementById('rules-modal').style.display = 'none';
-        };
-
-        window.handleRulesOverlayClick = (e) => {
-            if(e.target === document.getElementById('rules-modal')) closeRulesModal();
-        };
-
         // ==================== ANALYTICS TRACKING ====================
         async function trackMatchJoinToAnalytics() {
             const today = new Date().toISOString().split('T')[0];
@@ -2930,20 +2911,10 @@
             }
 
             if(!valid) return alert("Please fill Name and UID for all players.");
-
-            // Fee = per player fee × actual number of players filled
-            const actualPlayerCount = playersData.length;
-            const totalFee = currentJoinFee * actualPlayerCount;
-
-            const totalBal = depositBal + winningBal;
-            if(totalBal < totalFee) {
-                alert(`Insufficient Balance! You need ৳${totalFee} but you have ৳${totalBal}.`);
-                return;
-            }
             
             let newDeposit = depositBal;
             let newWinning = winningBal;
-            let remainingFee = totalFee;
+            let remainingFee = currentJoinFee;
 
             if(newDeposit >= remainingFee) {
                 newDeposit -= remainingFee;
@@ -2962,31 +2933,16 @@
                      userName: currentUser.username || currentUser.email,
                      players: playersData,
                      joinedAt: Date.now(),
-                     status: 'joined',
-                     entryFeePaid: totalFee,
-                     fromDeposit: Math.min(depositBal, totalFee),
-                     fromWinning: Math.max(0, totalFee - depositBal)
+                     status: 'joined'
                  };
                  
                  const participantRef = ref(db, `tournaments/${matchDbKey}/participants/${currentUser.uid}`);
                  set(participantRef, participantData);
                  
-                 // localStorage এ save করো যাতে match delete হলে detect করা যায়
-                 const joinedMatches = JSON.parse(localStorage.getItem('userJoinedMatches') || '{}');
-                 joinedMatches[matchDbKey] = {
-                     matchTitle: currentJoinMatchTitle || 'Match',
-                     entryFeePaid: totalFee,
-                     fromDeposit: Math.min(depositBal, totalFee),
-                     fromWinning: Math.max(0, totalFee - depositBal),
-                     joinedAt: Date.now(),
-                     matchCompleted: false
-                 };
-                 localStorage.setItem('userJoinedMatches', JSON.stringify(joinedMatches));
-                 
                  // Track entry fee in analytics
                  trackMatchJoinToAnalytics();
 
-                 alert(`✅ সফলভাবে জয়েন হয়েছে! ৳${totalFee} কাটা হয়েছে।\n'View Joined' এ গিয়ে আপনার নাম দেখুন।`);
+                 alert("✅ সফলভাবে জয়েন হয়েছে!\n'View Joined' এ গিয়ে আপনার নাম দেখুন।");
                  closeJoinModal();
                  
                  // Reload matches to update UI and hide join button
@@ -3280,62 +3236,48 @@ Admin verify করার পর আপনার balance যোগ হবে।
             }
         };
 
-        window.submitWithdraw = async () => {
+        window.submitWithdraw = () => {
             // Check cooldown - ignore if within 30 seconds
             if (!canMakeRequest('withdraw')) {
                 console.log('Withdraw request ignored - cooldown active');
-                return;
+                return; // Silently ignore
             }
-
+            
             const amount = parseInt(document.getElementById('withdraw-amount').value);
             const number = document.getElementById('withdraw-number').value;
             const method = document.getElementById('withdraw-method').value;
 
-            if (!amount || amount <= 0) return alert("⚠️ Please enter a valid amount");
-            if (amount < minWithdrawAmount) return alert(`Minimum Withdraw ${minWithdrawAmount} BDT`);
-            if (!number) return alert("Enter account number");
+            if(!amount || amount <= 0) {
+                return alert("⚠️ Please enter a valid amount");
+            }
 
+            if(amount < minWithdrawAmount) {
+                return alert(`Minimum Withdraw ${minWithdrawAmount} BDT`);
+            }
+            
+            // Calculate available balance (Total - 50 reserve)
+            const totalBalance = depositBal + winningBal;
             const RESERVE_AMOUNT = 50;
-            const userBalRef = ref(db, 'users/' + currentUser.uid);
+            const maxWithdraw = Math.max(0, totalBalance - RESERVE_AMOUNT);
+            
+            if(amount > maxWithdraw) {
+                return alert(`❌ Insufficient Balance! You can withdraw maximum ${maxWithdraw} ৳\n(50 ৳ must remain as reserve)`);
+            }
+            
+            if(!number) return alert("Enter account number");
 
-            // runTransaction: Firebase থেকে LIVE balance নিয়ে atomic deduct
-            // race condition সম্পূর্ণ বন্ধ
-            let finalFromWinning = 0;
-            let finalFromDeposit = 0;
-
-            try {
-                const txResult = await runTransaction(userBalRef, (userData) => {
-                    if (userData === null) return userData;
-
-                    const liveDeposit = userData.deposit || 0;
-                    const liveWinning = userData.winning || 0;
-                    const liveTotal   = liveDeposit + liveWinning;
-                    const maxWithdraw = Math.max(0, liveTotal - RESERVE_AMOUNT);
-
-                    if (amount > maxWithdraw) {
-                        return undefined; // transaction abort
-                    }
-
-                    // Winning থেকে আগে কাটো, তারপর Deposit থেকে
-                    finalFromWinning = Math.min(amount, liveWinning);
-                    finalFromDeposit = amount - finalFromWinning;
-
-                    userData.winning = liveWinning - finalFromWinning;
-                    userData.deposit = liveDeposit - finalFromDeposit;
-
-                    return userData;
-                });
-
-                if (!txResult.committed) {
-                    const liveSnap = await get(userBalRef);
-                    const liveData = liveSnap.val() || {};
-                    const liveTotal = (liveData.deposit || 0) + (liveData.winning || 0);
-                    const maxW = Math.max(0, liveTotal - RESERVE_AMOUNT);
-                    return alert(`❌ Insufficient Balance!\nMaximum withdraw: ${maxW} ৳\n(50 ৳ reserve বাদে)`);
-                }
-
-            } catch (e) {
-                return alert('Balance deduction error: ' + e.message);
+            // Calculate deduction from winning and deposit
+            let fromWinning = 0;
+            let fromDeposit = 0;
+            
+            if(amount <= winningBal) {
+                // Deduct everything from winning
+                fromWinning = amount;
+                fromDeposit = 0;
+            } else {
+                // Deduct all winning, rest from deposit
+                fromWinning = winningBal;
+                fromDeposit = amount - winningBal;
             }
 
             const nowDate = new Date().toLocaleString('en-US', {
@@ -3343,46 +3285,53 @@ Admin verify করার পর আপনার balance যোগ হবে।
                 hour: '2-digit', minute: '2-digit', hour12: true
             });
 
-            try {
-                await push(ref(db, 'withdrawRequests'), {
-                    userId:      currentUser.uid,
-                    userName:    currentUser.displayName || currentUser.email,
-                    method:      method,
-                    amount:      amount,
-                    phoneNumber: number,
-                    fromWinning: finalFromWinning,
-                    fromDeposit: finalFromDeposit,
-                    status:      'pending',
-                    date:        nowDate,
-                    timestamp:   Date.now()
-                });
-
-                await push(ref(db, 'transactions/' + currentUser.uid), {
-                    type:        'Withdraw',
-                    method:      method,
-                    amount:      amount,
-                    account:     number,
-                    fromWinning: finalFromWinning,
-                    fromDeposit: finalFromDeposit,
-                    status:      'Pending',
-                    date:        nowDate
-                });
-
-                alert("✅ Withdraw Request Sent! টাকা আপনার একাউন্ট থেকে কেটে নেওয়া হয়েছে। Admin approve করলে পাঠিয়ে দেওয়া হবে।");
-                document.getElementById('withdraw-amount').value = "";
-                document.getElementById('withdraw-number').value = "";
-                navigate('history');
-
-            } catch (e) {
-                // Request save fail হলে balance ফেরত দাও
-                runTransaction(userBalRef, (userData) => {
-                    if (userData === null) return userData;
-                    userData.deposit = (userData.deposit || 0) + finalFromDeposit;
-                    userData.winning = (userData.winning || 0) + finalFromWinning;
-                    return userData;
-                });
-                alert('Request save error: ' + e.message + '\nটাকা ফেরত দেওয়া হচ্ছে।');
-            }
+            // Submit withdraw request
+            push(ref(db, 'withdrawRequests'), {
+                userId: currentUser.uid,
+                userName: currentUser.displayName || currentUser.email,
+                method: method,
+                amount: parseInt(amount),
+                phoneNumber: number,
+                fromWinning: fromWinning,
+                fromDeposit: fromDeposit,
+                status: 'pending',
+                date: nowDate,
+                timestamp: Date.now()
+            }).then(() => {
+                // Deduct balance immediately from users/{uid} path
+                const userBalRef = ref(db, 'users/' + currentUser.uid);
+                get(userBalRef).then((snapshot) => {
+                    const currentData = snapshot.val() || {};
+                    const currentDeposit = currentData.deposit || 0;
+                    const currentWinning = currentData.winning || 0;
+                    
+                    const updatedDeposit = currentDeposit - fromDeposit;
+                    const updatedWinning = currentWinning - fromWinning;
+                    
+                    // Update the balance in database (users path)
+                    update(userBalRef, {
+                        deposit: updatedDeposit,
+                        winning: updatedWinning
+                    }).then(() => {
+                        // Add transaction record
+                        push(ref(db, 'transactions/' + currentUser.uid), {
+                            type: 'Withdraw',
+                            method: method,
+                            amount: amount,
+                            account: number,
+                            fromWinning: fromWinning,
+                            fromDeposit: fromDeposit,
+                            status: 'Pending',
+                            date: nowDate
+                        });
+                        
+                        alert("✅ Withdraw Request Sent! টাকা আপনার একাউন্ট থেকে কেটে নেওয়া হয়েছে। Admin approve করলে পাঠিয়ে দেওয়া হবে।");
+                        document.getElementById('withdraw-amount').value = "";
+                        document.getElementById('withdraw-number').value = "";
+                        navigate('history');
+                    }).catch(e => alert('Balance update error: ' + e.message));
+                }).catch(e => alert('Error fetching balance: ' + e.message));
+            }).catch(e => alert('Error: ' + e.message));
         };
 
         function loadHistory() {
@@ -3457,256 +3406,47 @@ Admin verify করার পর আপনার balance যোগ হবে।
             });
         }
         
-        // =====================================================
-        // =====================================================
-        // MATCH CANCEL REFUND SYSTEM
-        // যদি কোনো match incomplete অবস্থায় delete/cancel হয়
-        // তাহলে সেই match এ joined সব user দের entryFeePaid ফেরত দেবে
-        // =====================================================
-        async function checkMatchRefunds(currentMatches) {
-            if (!currentUser) return;
-            
-            try {
-                // User এর join করা সব match এর refund record check করো
-                const refundedRef = ref(db, `matchRefunds/${currentUser.uid}`);
-                const refundedSnap = await get(refundedRef);
-                const alreadyRefunded = refundedSnap.val() || {};
-                
-                // সব tournament check করো যেখানে current user participant
-                const tournamentsRef = ref(db, 'tournaments');
-                const tourSnap = await get(tournamentsRef);
-                const allTournaments = tourSnap.val() || {};
-                
-                for (const [matchId, matchData] of Object.entries(allTournaments)) {
-                    // শুধু cancelled/deleted status এর match দেখো
-                    if (matchData.status !== 'cancelled' && matchData.status !== 'canceled' && matchData.status !== 'deleted') continue;
-                    
-                    // Match complete/finished হলে refund দেবে না
-                    if (matchData.status === 'completed' || matchData.status === 'Finished') continue;
-                    
-                    // Current user এই match এ join করেছে কিনা চেক করো
-                    const participants = matchData.participants || {};
-                    const userParticipant = participants[currentUser.uid];
-                    if (!userParticipant) continue;
-                    
-                    // ইতিমধ্যে refund হয়ে গেছে কিনা চেক করো
-                    if (alreadyRefunded[matchId]) continue;
-                    
-                    // Refund করো
-                    const feePaid = userParticipant.entryFeePaid || 0;
-                    const fromDeposit = userParticipant.fromDeposit || 0;
-                    const fromWinning = userParticipant.fromWinning || 0;
-                    
-                    if (feePaid <= 0) continue;
-                    
-                    await processMatchRefund(matchId, matchData.title || 'Match', feePaid, fromDeposit, fromWinning);
-                }
-                
-                // ———— Live match delete detect করো ————
-                // যেসব match আগে ছিল কিন্তু এখন নেই (মানে delete হয়েছে)
-                const previousMatchIds = JSON.parse(localStorage.getItem('userJoinedMatches') || '{}');
-                for (const [matchId, joinInfo] of Object.entries(previousMatchIds)) {
-                    // Match এখনো আছে কিনা চেক করো
-                    if (currentMatches && currentMatches[matchId]) continue;
-                    
-                    // ইতিমধ্যে refund হয়ে গেছে কিনা
-                    if (alreadyRefunded[matchId]) continue;
-                    
-                    // Match completed ছিল কিনা - completed হলে refund দেবে না
-                    if (joinInfo.matchCompleted) continue;
-                    
-                    const feePaid = joinInfo.entryFeePaid || 0;
-                    if (feePaid <= 0) continue;
-                    
-                    await processMatchRefund(matchId, joinInfo.matchTitle || 'Match', feePaid, joinInfo.fromDeposit || 0, joinInfo.fromWinning || 0);
-                }
-                
-            } catch(e) {
-                console.error('checkMatchRefunds error:', e);
-            }
-        }
-        
-        async function processMatchRefund(matchId, matchTitle, feePaid, fromDeposit, fromWinning) {
-            if (!currentUser) return;
-            
-            const refundKey = `matchRefunds/${currentUser.uid}/${matchId}`;
-            const refundRef = ref(db, refundKey);
-            
-            try {
-                // Double-check: ইতিমধ্যে refund হয়েছে কিনা
-                const snap = await get(refundRef);
-                if (snap.exists()) return;
-                
-                // Mark করো যে processing হচ্ছে
-                await set(refundRef, { processing: true, timestamp: Date.now() });
-                
-                // User balance update করো
-                const userRef = ref(db, 'users/' + currentUser.uid);
-                await runTransaction(userRef, (userData) => {
-                    if (!userData) return userData;
-                    userData.deposit = (userData.deposit || 0) + fromDeposit;
-                    userData.winning = (userData.winning || 0) + fromWinning;
-                    return userData;
-                });
-                
-                // Final mark as refunded
-                await set(refundRef, {
-                    refunded: true,
-                    amount: feePaid,
-                    fromDeposit: fromDeposit,
-                    fromWinning: fromWinning,
-                    matchTitle: matchTitle,
-                    refundedAt: Date.now()
-                });
-                
-                // Transaction history তে record রাখো
-                const nowDate = new Date().toLocaleString('en-US', {
-                    month: '2-digit', day: '2-digit', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit', hour12: true
-                });
-                push(ref(db, 'transactions/' + currentUser.uid), {
-                    type: 'Match Refund',
-                    amount: feePaid,
-                    fromDeposit: fromDeposit,
-                    fromWinning: fromWinning,
-                    status: 'Completed',
-                    date: nowDate,
-                    note: `"${matchTitle}" match cancel এর কারণে entry fee refund`
-                });
-                
-                showToast(`✅ ৳${feePaid} Refund হয়েছে! Match: ${matchTitle}`, 'success');
-                console.log(`✅ Match refund processed: ৳${feePaid} for match ${matchId}`);
-                
-            } catch(e) {
-                // Reset processing flag
-                set(refundRef, null).catch(() => {});
-                console.error('processMatchRefund error:', e);
-            }
-        }
-
-        // AUTO-REFUND SYSTEM (App বন্ধ থাকলেও কাজ করবে)
-        // =====================================================
-        // যেভাবে কাজ করে:
-        // 1) App খোলার সাথে সাথে একবার সব pending refund check করে (one-time scan)
-        // 2) তারপর real-time listener চালু রাখে যাতে app খোলা থাকলেও instant refund হয়
-        // 3) Firebase runTransaction() ব্যবহার করে race condition এড়ানো হয়েছে
-        // =====================================================
-
-        // একটা request এর refund process করার main function
-        async function processRefund(requestId, request) {
-            const requestRef = ref(db, `withdrawRequests/${requestId}`);
-            const userRef = ref(db, 'users/' + currentUser.uid);
-
-            try {
-                // Step 1: প্রথমে request টা "refund_processing" mark করো
-                // এতে একই request দুইবার process হবে না (race condition fix)
-                const claimSnap = await get(requestRef);
-                const claimData = claimSnap.val();
-
-                // যদি ইতিমধ্যে refunded বা processing এ থাকে, skip করো
-                if (!claimData || claimData.refunded || claimData.refund_processing) {
-                    return;
-                }
-
-                // Atomic claim - refund_processing flag সেট করো
-                await update(requestRef, { refund_processing: true });
-
-                // Step 2: Firebase runTransaction দিয়ে balance update (race condition safe)
-                await runTransaction(userRef, (userData) => {
-                    if (userData === null) return userData;
-                    
-                    const currentDeposit = userData.deposit || 0;
-                    const currentWinning = userData.winning || 0;
-                    
-                    userData.deposit = currentDeposit + (request.fromDeposit || 0);
-                    userData.winning = currentWinning + (request.fromWinning || 0);
-                    
-                    return userData;
-                });
-
-                // Step 3: Request কে final refunded mark করো
-                await update(requestRef, {
-                    refunded: true,
-                    refund_processing: false,
-                    refundedAt: Date.now()
-                });
-
-                // Step 4: Transaction history তে refund record রাখো
-                const nowDate = new Date().toLocaleString('en-US', {
-                    month: '2-digit', day: '2-digit', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit', hour12: true
-                });
-                push(ref(db, 'transactions/' + currentUser.uid), {
-                    type: 'Refund',
-                    method: request.method || 'N/A',
-                    amount: request.amount,
-                    account: request.phoneNumber || '',
-                    fromWinning: request.fromWinning || 0,
-                    fromDeposit: request.fromDeposit || 0,
-                    status: 'Completed',
-                    date: nowDate,
-                    note: 'Withdraw reject এর কারণে auto-refund'
-                });
-
-                console.log(`✅ Refund processed: ${request.amount}৳`);
-
-            } catch (e) {
-                // Processing flag টা reset করো যাতে পরের বার আবার try করতে পারে
-                update(requestRef, { refund_processing: false }).catch(() => {});
-                console.error('Refund error:', e);
-            }
-        }
-
-        // App খোলার সাথে সাথে একবার সব missed refund check করে (app বন্ধ ছিলে হলেও কাজ করবে)
-        async function checkMissedRefunds() {
-            if (!currentUser) return;
-            
-            try {
-                const withdrawRef = ref(db, 'withdrawRequests');
-                const snap = await get(withdrawRef);
-                const allRequests = snap.val();
-                if (!allRequests) return;
-
-                const refundPromises = [];
-                Object.entries(allRequests).forEach(([requestId, request]) => {
-                    if (request.userId === currentUser.uid &&
-                        (request.status === 'rejected' || request.status === 'declined') &&
-                        !request.refunded &&
-                        !request.refund_processing) {
-                        
-                        refundPromises.push(processRefund(requestId, request));
-                    }
-                });
-
-                if (refundPromises.length > 0) {
-                    await Promise.all(refundPromises);
-                    console.log(`✅ Missed refunds processed: ${refundPromises.length} টি`);
-                }
-            } catch (e) {
-                console.error('checkMissedRefunds error:', e);
-            }
-        }
-
-        // Real-time listener - app খোলা থাকাকালীন instant refund এর জন্য
+        // Monitor withdraw requests for auto-refund on rejection
         function monitorWithdrawRequests() {
             if (!currentUser) return;
-
-            // প্রথমে app খোলার সময় missed refund check করো
-            checkMissedRefunds();
-
-            // তারপর real-time listener চালু রাখো
+            
             const withdrawRef = ref(db, 'withdrawRequests');
             onValue(withdrawRef, (snapshot) => {
                 const allRequests = snapshot.val();
                 if (!allRequests) return;
-
+                
+                // Filter user's requests
                 Object.entries(allRequests).forEach(([requestId, request]) => {
-                    if (request.userId === currentUser.uid &&
+                    if (request.userId === currentUser.uid && 
                         (request.status === 'rejected' || request.status === 'declined') &&
-                        !request.refunded &&
-                        !request.refund_processing) {
+                        !request.refunded) {
                         
-                        processRefund(requestId, request);
+                        // Process refund
+                        const userRef = ref(db, 'users/' + currentUser.uid);
+                        get(userRef).then((userSnap) => {
+                            const userData = userSnap.val() || {};
+                            const currentDeposit = userData.deposit || 0;
+                            const currentWinning = userData.winning || 0;
+                            
+                            // Add back the withdrawn amounts
+                            const refundedDeposit = currentDeposit + (request.fromDeposit || 0);
+                            const refundedWinning = currentWinning + (request.fromWinning || 0);
+                            
+                            // Update user balance
+                            update(userRef, {
+                                deposit: refundedDeposit,
+                                winning: refundedWinning
+                            }).then(() => {
+                                // Mark this request as refunded to prevent duplicate refunds
+                                const requestRef = ref(db, `withdrawRequests/${requestId}`);
+                                update(requestRef, {
+                                    refunded: true,
+                                    refundedAt: Date.now()
+                                });
+                                
+                                console.log(`✅ Refund processed: ${request.amount}৳`);
+                            });
+                        });
                     }
                 });
             });
