@@ -566,6 +566,39 @@
                     <div style="text-align:center; color:var(--text-muted); padding:20px;">Select a date to view details</div>
                 </div>
             </div>
+
+            <!-- ========== ALL-TIME PERMANENT EARNING ========== -->
+            <div style="margin-top:32px; padding-top:24px; border-top:2px solid rgba(255,69,0,0.3);">
+                <div style="font-size:18px; font-weight:700; color:var(--primary); margin-bottom:4px;">📊 All-Time Total Earning</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">সব সময়ের জমা হিসাব — কখনো মুছবে না</div>
+
+                <div class="stats-grid">
+                    <div class="stat-card" style="background:linear-gradient(135deg, rgba(0,200,255,0.15), rgba(0,200,255,0.05)); border-color:rgba(0,200,255,0.3);">
+                        <div class="stat-icon">🎮</div>
+                        <div class="stat-val" id="allTimeEntryFee">0৳</div>
+                        <div class="stat-lbl">Total Entry Fee</div>
+                    </div>
+                    <div class="stat-card" style="background:linear-gradient(135deg, rgba(255,171,0,0.15), rgba(255,171,0,0.05)); border-color:rgba(255,171,0,0.3);">
+                        <div class="stat-icon">🏆</div>
+                        <div class="stat-val" id="allTimeWinningPrize">0৳</div>
+                        <div class="stat-lbl">Winning Prize</div>
+                    </div>
+                </div>
+
+                <div style="background:linear-gradient(135deg, rgba(255,69,0,0.15), rgba(255,69,0,0.05)); border:2px solid rgba(255,69,0,0.4); border-radius:14px; padding:20px; text-align:center; margin-top:16px;">
+                    <div style="font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">💰 All-Time Net Profit</div>
+                    <div id="allTimeNetProfit" style="font-size:32px; font-weight:900; color:var(--success);">0৳</div>
+                    <div id="allTimeProfitPercent" style="font-size:11px; color:var(--text-muted); margin-top:4px;">-</div>
+                </div>
+
+                <!-- Daily history list -->
+                <div style="margin-top:20px;">
+                    <div style="font-size:13px; font-weight:700; color:var(--text); margin-bottom:12px;">📅 Daily History</div>
+                    <div id="allTimeDailyHistory" style="background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:16px;">
+                        <div style="text-align:center; color:var(--text-muted); padding:20px;">Loading...</div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Users -->
@@ -3187,56 +3220,33 @@
                     const totalPrize = prize + killEarnings;
                     const players = p.players || [];
                     const memberCount = players.length || 1;
-                    const prizePerMember = Math.floor(totalPrize / memberCount);
+                    const prizePerMember = Math.floor(totalPrize / memberCount); // শুধু Winner Board display এর জন্য
 
-                    // ✅ প্রত্যেক team member এর winning balance আলাদাভাবে update করা হবে
-                    // Leader এর winning update
+                    // ✅ শুধুমাত্র Leader (যে Entry Fee দিয়েছে) পুরো Prize পাবে
                     const leaderSnap = await db.ref(`users/${uid}`).once('value');
                     const leaderData = leaderSnap.val() || {};
-                    updates[`users/${uid}/winning`] = (leaderData.winning || 0) + prizePerMember;
+                    updates[`users/${uid}/winning`] = (leaderData.winning || 0) + totalPrize;
                     
-                    // ✅ Leader এর transaction history তে entry যোগ করা
+                    // ✅ Leader এর transaction history তে পুরো prize entry
                     const leaderTxnId = `prize_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                     updates[`transactions/${uid}/${leaderTxnId}`] = {
                         type: 'Prize',
-                        amount: prizePerMember,
+                        amount: totalPrize,
                         status: 'Completed',
                         date: new Date().toLocaleDateString('bn-BD'),
                         timestamp: Date.now(),
                         matchTitle: match.title || 'Tournament',
                         kills: kills,
-                        position: `Winner`
+                        position: `Winner`,
+                        note: `Full prize (Entry paid by this account)`
                     };
-                    
-                    // ✅ প্রত্যেক team member এর winning update এবং transaction history
-                    for (const player of players) {
-                        const playerId = player.uid || player.userId;
-                        if (playerId && playerId !== uid) {  // Leader already updated
-                            const memberSnap = await db.ref(`users/${playerId}`).once('value');
-                            const memberData = memberSnap.val() || {};
-                            updates[`users/${playerId}/winning`] = (memberData.winning || 0) + prizePerMember;
-                            
-                            // ✅ Member এর transaction history তে entry যোগ করা
-                            const memberTxnId = `prize_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                            updates[`transactions/${playerId}/${memberTxnId}`] = {
-                                type: 'Prize',
-                                amount: prizePerMember,
-                                status: 'Completed',
-                                date: new Date().toLocaleDateString('bn-BD'),
-                                timestamp: Date.now(),
-                                matchTitle: match.title || 'Tournament',
-                                teamLeader: p.userName || uid,
-                                position: `Winner (Team)`
-                            };
-                        }
-                    }
 
-                    // Winner board এর জন্য সব সদস্যের নাম ও prize per member
+                    // ✅ Winner Board এ দেখানোর জন্য সব members এ ভাগ করা prize (শুধু display)
                     const teamMembers = players.map((pl, idx) => ({
                         name: pl.playerName || pl.name || `Player ${idx+1}`,
                         gameId: pl.gameId || pl.uid || '-',
                         userId: pl.uid || pl.userId || null,
-                        prize: prizePerMember
+                        prize: prizePerMember  // Winner Board এ ভাগ করে দেখাবে
                     }));
 
                     winnerEntries.push({
@@ -3841,6 +3851,70 @@
     function initEarningSection() {
         initDateSelectors();
         loadEarningData();
+        loadAllTimeEarning();
+    }
+
+    // Load All-Time Permanent Earning
+    async function loadAllTimeEarning() {
+        try {
+            const snap = await db.ref('analytics/earning').once('value');
+            const data = snap.val() || {};
+
+            let allEntryFee = 0;
+            let allWinningPrize = 0;
+            const dailyList = [];
+
+            for (const date in data) {
+                const d = data[date];
+                const ef = d.entryFee || 0;
+                const wp = d.winningPrize || 0;
+                allEntryFee += ef;
+                allWinningPrize += wp;
+                dailyList.push({ date, entryFee: ef, winningPrize: wp, profit: ef - wp });
+            }
+
+            // Sort newest first
+            dailyList.sort((a, b) => b.date.localeCompare(a.date));
+
+            const netProfit = allEntryFee - allWinningPrize;
+            const profitMargin = allEntryFee > 0 ? ((netProfit / allEntryFee) * 100).toFixed(1) : 0;
+
+            document.getElementById('allTimeEntryFee').textContent = allEntryFee + '৳';
+            document.getElementById('allTimeWinningPrize').textContent = allWinningPrize + '৳';
+            document.getElementById('allTimeNetProfit').textContent = netProfit + '৳';
+            document.getElementById('allTimeNetProfit').style.color = netProfit >= 0 ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('allTimeProfitPercent').textContent = netProfit >= 0
+                ? `Profit Margin: ${profitMargin}%`
+                : `Loss: ${Math.abs(profitMargin)}%`;
+
+            // Daily history list
+            const historyContainer = document.getElementById('allTimeDailyHistory');
+            if (dailyList.length === 0) {
+                historyContainer.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:20px;">No data yet</div>';
+                return;
+            }
+
+            let html = '';
+            dailyList.forEach(row => {
+                const profitColor = row.profit >= 0 ? 'var(--success)' : 'var(--danger)';
+                html += `
+                <div style="padding:12px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <div style="font-size:13px; font-weight:700; color:var(--text);">📅 ${row.date}</div>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:3px;">
+                            Entry: ${row.entryFee}৳ &nbsp;|&nbsp; Prize: ${row.winningPrize}৳
+                        </div>
+                    </div>
+                    <div style="font-size:15px; font-weight:800; color:${profitColor};">
+                        ${row.profit >= 0 ? '+' : ''}${row.profit}৳
+                    </div>
+                </div>`;
+            });
+            historyContainer.innerHTML = html;
+
+        } catch(e) {
+            console.error('Error loading all-time earning:', e);
+        }
     }
 
     // Load Earning Data
