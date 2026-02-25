@@ -3013,17 +3013,12 @@
                     break;
                 }
                 
-                // ✅ Name validation: min 3 chars, no special chars only
-                if(name.length < 3) {
-                    return alert(`Player ${i+1}: In-Game Name কমপক্ষে ৩ অক্ষর হতে হবে।`);
+                // ✅ শুধু খালি চেক — যেকোনো নাম ও যেকোনো সংখ্যা গ্রহণযোগ্য
+                if(name.length < 1) {
+                    return alert(`Player ${i+1}: In-Game Name দিন।`);
                 }
-                if(/^[^a-zA-Z0-9ঀ-৿_. ]+$/.test(name)) {
-                    return alert(`Player ${i+1}: সঠিক In-Game Name দিন।`);
-                }
-                
-                // ✅ UID validation: must be numeric, 6-12 digits
-                if(!/^\d{6,12}$/.test(uid)) {
-                    return alert(`Player ${i+1}: Free Fire UID অবশ্যই ৬-১২ সংখ্যার হতে হবে (শুধু নম্বর)।`);
+                if(String(uid).trim().length < 1) {
+                    return alert(`Player ${i+1}: Game UID দিন।`);
                 }
                 
                 playersData.push({
