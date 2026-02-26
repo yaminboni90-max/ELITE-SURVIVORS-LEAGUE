@@ -2808,17 +2808,24 @@
             if(type.toLowerCase().includes('squad')) count = 4;
 
             for(let i=1; i<=count; i++) {
+                const isOpt = i > 1;
                 container.innerHTML += `
                     <div style="margin-bottom:15px;">
-                        <h5 style="font-size:12px; margin-bottom:5px; color:#666;">Player ${i} Details</h5>
+                        <h5 style="font-size:12px; margin-bottom:5px; color:#666;">
+                            Player ${i} 
+                            ${isOpt ? '<span style="color:#aaa;font-weight:400;font-size:11px;">(Optional)</span>' : '<span style="color:#FF5500;font-weight:700;font-size:11px;">* Required</span>'}
+                        </h5>
                         <div class="form-group" style="margin-bottom:8px;">
-                            <input type="text" class="input-field player-name-input" placeholder="In-Game Name">
+                            <input type="text" class="input-field player-name-input" placeholder="${isOpt ? 'In-Game Name (ঐচ্ছিক)' : 'In-Game Name'}">
                         </div>
                         <div class="form-group">
-                            <input type="number" class="input-field player-uid-input" placeholder="Game ID/UID">
+                            <input type="number" class="input-field player-uid-input" placeholder="${isOpt ? 'Game ID/UID (ঐচ্ছিক)' : 'Game ID/UID'}">
                         </div>
                     </div>
                 `;
+            }
+            if(count > 1) {
+                container.innerHTML += '<p style="font-size:11px;color:#888;text-align:center;margin-top:5px;background:#f9f9f9;padding:8px;border-radius:8px;">💡 একা খেলতে চাইলে শুধু Player 1 পূরণ করুন। যতজন পূরণ করবেন ততজন count হবে।</p>';
             }
             document.querySelector('#join-modal .primary-btn').dataset.matchKey = matchDbKey;
             document.getElementById('join-modal').classList.add('active');
@@ -3002,25 +3009,18 @@
             const uidInputs = document.querySelectorAll('.player-uid-input');
             const matchDbKey = document.querySelector('#join-modal .primary-btn').dataset.matchKey;
 
-            let valid = true;
             let playersData = [];
 
             for(let i=0; i<nameInputs.length; i++) {
                 const name = nameInputs[i].value.trim();
                 const uid = uidInputs[i].value.trim();
                 
-                if(!name || !uid) {
-                    valid = false;
-                    break;
-                }
+                // দুটোই খালি হলে skip (optional player)
+                if(!name && !uid) continue;
                 
-                // ✅ শুধু খালি চেক — যেকোনো নাম ও যেকোনো সংখ্যা গ্রহণযোগ্য
-                if(name.length < 1) {
-                    return alert(`Player ${i+1}: In-Game Name দিন।`);
-                }
-                if(String(uid).trim().length < 1) {
-                    return alert(`Player ${i+1}: Game UID দিন।`);
-                }
+                // একটা দিলে অন্যটাও দিতে হবে
+                if(name && !uid) return alert(`Player ${i+1}: UID/Game ID দিন।`);
+                if(!name && uid) return alert(`Player ${i+1}: In-Game Name দিন।`);
                 
                 playersData.push({
                     name: name,
@@ -3030,9 +3030,10 @@
                 });
             }
 
-            if(!valid) return alert("সকল player এর Name এবং UID দিন।");
+            // কমপক্ষে ১ জন লাগবে
+            if(playersData.length === 0) return alert("কমপক্ষে ১ জন Player এর নাম ও UID দিন।");
 
-            // ✅ Duplicate Name & UID check (Squad/Duo এর জন্য)
+            // ✅ Duplicate Name & UID check
             if(playersData.length > 1) {
                 const names = playersData.map(p => p.name.toLowerCase());
                 const uids = playersData.map(p => p.uid);
@@ -3041,10 +3042,14 @@
                 if(dupName) return alert(`❌ একই In-Game Name একাধিক বার দেওয়া যাবে না!\nসকল Player এর নাম আলাদা হতে হবে।`);
                 if(dupUid) return alert(`❌ একই UID/Game ID একাধিক বার দেওয়া যাবে না!\nসকল Player এর UID আলাদা হতে হবে।`);
             }
+
+            // Entry fee পূরণ করা player সংখ্যা অনুযায়ী calculate
+            const perPlayerFee = currentJoinFee / currentJoinTeamSize;
+            const actualFee = Math.round(perPlayerFee * playersData.length);
             
             let newDeposit = depositBal;
             let newWinning = winningBal;
-            let remainingFee = currentJoinFee;
+            let remainingFee = actualFee;
 
             if(newDeposit >= remainingFee) {
                 newDeposit -= remainingFee;
